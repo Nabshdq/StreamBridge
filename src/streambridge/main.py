@@ -1,26 +1,39 @@
+import asyncio
+
 from core.lifecycle import LifecycleManager
+from core.shutdown import ShutdownHandler
 from core.logger import logger
 
 
-def main():
+async def main():
     lifecycle = LifecycleManager()
+    shutdown = ShutdownHandler()
 
     logger.info("==============================")
     logger.info("STREAMBRIDGE STARTING")
     logger.info("==============================")
 
+    shutdown.setup()
+
     lifecycle.start()
-
-    logger.info("Application initialized")
-
     lifecycle.running()
 
     logger.info("StreamBridge is running")
 
-    lifecycle.stop()
+    try:
+        await shutdown.wait()
 
-    logger.info("StreamBridge stopped")
+    finally:
+        logger.info("Shutdown signal received")
+
+        lifecycle.stop()
+
+        logger.info("StreamBridge stopped cleanly")
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        asyncio.run(main())
+
+    except KeyboardInterrupt:
+        logger.info("CTRL+C received")
