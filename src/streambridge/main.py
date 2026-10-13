@@ -1,6 +1,6 @@
 import asyncio
 
-from core.runner import ApplicationRunner
+from .core.runner import ApplicationRunner
 
 
 async def main():
@@ -9,5 +9,9 @@ async def main():
     await runner.start()
 
 
-if __name__ == "__main__":
+def run():
     asyncio.run(main())
+
+
+if __name__ == "__main__":
+    run()
