@@ -1,22 +1,25 @@
 from core.lifecycle import LifecycleManager
+from core.logger import logger
 
 
 def main():
     lifecycle = LifecycleManager()
 
-    print("==============================")
-    print("STREAMBRIDGE STARTING")
-    print("==============================")
+    logger.info("==============================")
+    logger.info("STREAMBRIDGE STARTING")
+    logger.info("==============================")
 
     lifecycle.start()
 
-    print("Application initialized")
+    logger.info("Application initialized")
 
     lifecycle.running()
 
-    print("StreamBridge is running")
+    logger.info("StreamBridge is running")
 
     lifecycle.stop()
+
+    logger.info("StreamBridge stopped")
 
 
 if __name__ == "__main__":
