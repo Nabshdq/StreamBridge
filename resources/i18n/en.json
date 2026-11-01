@@ -1,0 +1,10 @@
+{
+  "relay.template.chat": "💬 [TikTok] {user}: {message}",
+  "relay.template.gift": "🎁 [TikTok] {user} sent {gift} {icon} x{count}",
+  "relay.template.follow": "⭐ [TikTok] {user} followed",
+  "relay.template.like": "❤️ [TikTok] {user} liked the LIVE",
+  "relay.template.share": "🔗 [TikTok] {user} shared the LIVE",
+  "relay.template.repost": "🔁 [TikTok] {user} reposted the LIVE",
+  "relay.link_placeholder": "[sent a link]",
+  "relay.compact_prefix": "💬 TikTok:"
+}

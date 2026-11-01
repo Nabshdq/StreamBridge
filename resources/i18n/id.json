@@ -1,0 +1,10 @@
+{
+  "relay.template.chat": "💬 [TikTok] {user}: {message}",
+  "relay.template.gift": "🎁 [TikTok] {user} mengirim {gift} {icon} x{count}",
+  "relay.template.follow": "⭐ [TikTok] {user} mulai mengikuti",
+  "relay.template.like": "❤️ [TikTok] {user} menyukai LIVE",
+  "relay.template.share": "🔗 [TikTok] {user} membagikan LIVE",
+  "relay.template.repost": "🔁 [TikTok] {user} me-repost LIVE",
+  "relay.link_placeholder": "[mengirim tautan]",
+  "relay.compact_prefix": "💬 TikTok:"
+}
