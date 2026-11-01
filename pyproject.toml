@@ -1,0 +1,69 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "streambridge"
+version = "0.1.0.dev0"
+description = "Relay TikTok LIVE chat, gifts and follows to Twitch and YouTube live chat."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
+authors = [{ name = "Muhammad Nabil Shadiq" }]
+keywords = ["tiktok", "twitch", "youtube", "live", "chat", "relay", "streaming"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Environment :: Win32 (MS Windows)",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: Microsoft :: Windows :: Windows 10",
+    "Operating System :: Microsoft :: Windows :: Windows 11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Communications :: Chat",
+]
+# Runtime dependencies are added in the phase that first needs them.
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.6",
+]
+
+[project.urls]
+Homepage = "https://github.com/Nabshdq/StreamBridge"
+Issues = "https://github.com/Nabshdq/StreamBridge/issues"
+
+[project.scripts]
+streambridge = "streambridge.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/streambridge"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests", "tools"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # import sorting
+    "B",   # bugbear: likely bugs
+    "UP",  # pyupgrade: modern syntax
+    "SIM", # simplifications
+    "N",   # naming conventions
+]
+
+[tool.ruff.format]
+# Do not reformat code samples inside Markdown docs.
+exclude = ["*.md"]

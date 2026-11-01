@@ -1,0 +1,48 @@
+# --- Secrets (never commit) ---
+.env
+.env.*
+client_secret*.json
+*token*.json
+*.keyring
+credentials*.json
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# --- Virtual environments ---
+.venv/
+venv/
+env/
+
+# --- Tool caches ---
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# --- Build output (hatch, Nuitka, Inno Setup) ---
+dist/
+*.build/
+*.dist/
+*.onefile-build/
+nuitka-crash-report.xml
+build/output/
+Output/
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Local AI assistant instructions ---
+CLAUDE.md
+
+# --- Editors / OS ---
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
+.DS_Store
