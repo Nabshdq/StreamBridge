@@ -7,7 +7,12 @@ import pytest
 import cli
 from fake_source import FakeSource
 from streambridge.auth import twitch_device
-from streambridge.core.secrets import TWITCH_BOT_KEY, TWITCH_BROADCASTER_KEY, MemoryStore
+from streambridge.core.secrets import (
+    TIKTOK_EULER_KEY,
+    TWITCH_BOT_KEY,
+    TWITCH_BROADCASTER_KEY,
+    MemoryStore,
+)
 from streambridge.destinations.twitch import TwitchDestination
 from streambridge.sources.tiktok import TikTokSource
 
@@ -123,6 +128,31 @@ def test_build_twitch_destination_modes(
     assert isinstance(destination, TwitchDestination)
     assert destination._bot_mode is bot_mode
     assert destination._account_key == (TWITCH_BOT_KEY if bot_mode else TWITCH_BROADCASTER_KEY)
+
+
+def test_save_and_forget_euler_key(
+    memory_keyring: MemoryStore, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The Euler key can be saved and removed, and is never printed."""
+    assert cli.main(["--save-euler-key", "secret-euler"]) == 0
+    assert memory_keyring.get(TIKTOK_EULER_KEY) == "secret-euler"
+    assert "secret-euler" not in capsys.readouterr().err
+    assert cli.main(["--forget-euler-key"]) == 0
+    assert memory_keyring.get(TIKTOK_EULER_KEY) is None
+
+
+def test_tiktok_uses_saved_euler_key_unless_overridden() -> None:
+    """--tiktok picks up the saved key; --euler-key wins for one run."""
+    store = MemoryStore()
+    store.set(TIKTOK_EULER_KEY, "saved")
+    saved = cli.build_source(cli.build_parser().parse_args(["--tiktok", "x"]), store)
+    once = cli.build_source(
+        cli.build_parser().parse_args(["--tiktok", "x", "--euler-key", "once"]), store
+    )
+    assert isinstance(saved, TikTokSource)
+    assert isinstance(once, TikTokSource)
+    assert saved._euler_key == "saved"
+    assert once._euler_key == "once"
 
 
 def test_cli_fake_run_prints_messages(tmp_home: Path, capsys: pytest.CaptureFixture[str]) -> None:

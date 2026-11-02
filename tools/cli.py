@@ -19,8 +19,9 @@ relayed to two console destinations that behave like Twitch (500 characters,
 80 messages / 30 s, never drops) and YouTube (200 characters, compact mode,
 queue of 30). With ``--twitch`` the real Twitch chat replaces the Twitch one.
 
-``--euler-key`` is only used while the program runs; it is never saved.
-Twitch logins are saved in the Windows Credential Manager.
+``--euler-key`` is only used for one run. ``--save-euler-key KEY`` stores the
+key in the Windows Credential Manager so ``--tiktok`` uses it automatically;
+``--forget-euler-key`` removes it. Twitch logins are saved there too.
 """
 
 import argparse
@@ -45,6 +46,7 @@ from streambridge.auth.twitch_device import (
     TwitchSetupError,
     get_client_id,
 )
+from streambridge.core.assembly import euler_key as saved_euler_key
 from streambridge.core.config import AppConfig, load_config
 from streambridge.core.engine import DestinationSetup, EngineListener, EngineSettings, RelayEngine
 from streambridge.core.events import ConnectionStatus
@@ -54,6 +56,7 @@ from streambridge.core.outqueue import YOUTUBE_MAX_QUEUE
 from streambridge.core.pipeline import Counters
 from streambridge.core.ratelimit import TWITCH_RULES, YOUTUBE_RULES
 from streambridge.core.secrets import (
+    TIKTOK_EULER_KEY,
     TWITCH_BOT_KEY,
     TWITCH_BROADCASTER_KEY,
     KeyringStore,
@@ -100,7 +103,16 @@ def build_parser() -> argparse.ArgumentParser:
     source = parser.add_mutually_exclusive_group()
     source.add_argument("--fake", action="store_true", help="use simulated TikTok events")
     source.add_argument("--tiktok", metavar="USERNAME", help="read a real TikTok LIVE")
-    parser.add_argument("--euler-key", default=None, help="optional Euler Stream API key")
+    parser.add_argument(
+        "--euler-key", default=None, help="Euler Stream API key for this run only (not saved)"
+    )
+    euler = parser.add_mutually_exclusive_group()
+    euler.add_argument(
+        "--save-euler-key", metavar="KEY", help="save an Euler API key in Credential Manager"
+    )
+    euler.add_argument(
+        "--forget-euler-key", action="store_true", help="remove the saved Euler API key"
+    )
     parser.add_argument(
         "--show-raw", action="store_true", help="print raw follow/share data (finding reposts)"
     )
@@ -170,15 +182,35 @@ def print_raw(raw: dict[str, Any]) -> None:
     print(f"[raw] {fields}", file=sys.stderr)
 
 
-def build_source(args: argparse.Namespace) -> Source:
-    """Create the source chosen on the command line."""
+def build_source(args: argparse.Namespace, store: SecretStore | None = None) -> Source:
+    """Create the source chosen on the command line.
+
+    The Euler key comes from ``--euler-key`` (this run only) or else from the
+    key saved with ``--save-euler-key``.
+    """
     if args.tiktok:
+        key = args.euler_key or (saved_euler_key(store) if store is not None else None)
         return TikTokSource(
             args.tiktok,
-            euler_key=args.euler_key,
+            euler_key=key,
             raw_listener=print_raw if args.show_raw else None,
         )
     return FakeSource(interval=args.interval, seed=args.seed)
+
+
+def run_euler_key_command(args: argparse.Namespace, store: SecretStore) -> int:
+    """Handle --save-euler-key and --forget-euler-key (the key is never printed)."""
+    if args.forget_euler_key:
+        store.delete(TIKTOK_EULER_KEY)
+        print("Euler API key removed from this PC.", file=sys.stderr)
+        return 0
+    key = args.save_euler_key.strip()
+    if not key:
+        print("[error] The Euler API key is empty.", file=sys.stderr)
+        return 1
+    store.set(TIKTOK_EULER_KEY, key)
+    print("Euler API key saved in the Windows Credential Manager.", file=sys.stderr)
+    return 0
 
 
 def show_device_code(device: DeviceCode) -> None:
@@ -236,7 +268,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     account_command = args.twitch_login or args.twitch_login_bot or args.twitch_logout
-    if not account_command and not args.fake and not args.tiktok:
+    euler_command = args.save_euler_key is not None or args.forget_euler_key
+    if not (account_command or euler_command) and not args.fake and not args.tiktok:
         parser.error("choose a source: --fake or --tiktok USERNAME (or a --twitch-login option)")
     if args.twitch_channel and not args.twitch:
         parser.error("--twitch-channel needs --twitch")
@@ -248,6 +281,8 @@ def main(argv: list[str] | None = None) -> int:
     setup_logging(console_level=logging.WARNING)
 
     store = KeyringStore()
+    if euler_command:
+        return run_euler_key_command(args, store)
     if account_command:
         return run_twitch_account_command(args, store)
 
@@ -261,7 +296,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     listener = PrintingListener()
     engine = RelayEngine(
-        source=build_source(args),
+        source=build_source(args, store),
         destinations=build_destinations(config, twitch),
         settings=EngineSettings.from_config(config),
         listener=listener,
