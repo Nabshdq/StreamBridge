@@ -124,9 +124,13 @@ class Pipeline:
         for gift in self.gift_merger.flush_all():
             self._route(gift, now)
         for route in self.routes:
-            if route.batcher is not None:
-                for text in route.batcher.flush_all():
-                    self._deliver(route, OutMessage.for_kind(text, "chat"))
+            self.flush_batcher(route)
+
+    def flush_batcher(self, route: Route) -> None:
+        """Queue all chat a route's compact batcher is holding (nothing is lost)."""
+        if route.batcher is not None:
+            for text in route.batcher.flush_all():
+                self._deliver(route, OutMessage.for_kind(text, "chat"))
 
     def reset_session(self) -> None:
         """Start a new session (the TikTok LIVE connected again)."""

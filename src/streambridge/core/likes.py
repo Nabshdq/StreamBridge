@@ -29,7 +29,7 @@ class SocialDeduper:
             repeat_window: Seconds in which a repeated share/repost is ignored.
             max_viewers: Upper bound for each memory; the oldest entries are forgotten.
         """
-        self._repeat_window = repeat_window
+        self.repeat_window = repeat_window
         self._max_viewers = max_viewers
         self._liked: OrderedDict[str, None] = OrderedDict()
         # (kind, viewer) -> last time a share/repost was relayed.
@@ -77,6 +77,6 @@ class SocialDeduper:
         """Drop share entries that are older than the repeat window."""
         while self._last_shared:
             oldest_key, oldest_time = next(iter(self._last_shared.items()))
-            if now - oldest_time < self._repeat_window:
+            if now - oldest_time < self.repeat_window:
                 break
             del self._last_shared[oldest_key]

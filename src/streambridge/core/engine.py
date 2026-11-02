@@ -14,7 +14,7 @@ import logging
 import threading
 import time
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from streambridge.core.batching import DEFAULT_COMPACT_WINDOW, ChatBatcher
@@ -57,6 +57,21 @@ class DestinationSetup:
     """
 
     destination: Destination
+    toggles: Mapping[str, bool]
+    templates: Mapping[str, str] = field(default_factory=dict)
+    compact_mode: bool = False
+
+
+@dataclass(frozen=True)
+class RouteOptions:
+    """Per-destination pipeline options that can change while the relay runs.
+
+    Attributes:
+        toggles: ``{kind: enabled}`` event toggles.
+        templates: The user's custom templates.
+        compact_mode: Join chat into batches (YouTube).
+    """
+
     toggles: Mapping[str, bool]
     templates: Mapping[str, str] = field(default_factory=dict)
     compact_mode: bool = False
@@ -204,6 +219,24 @@ class RelayEngine:
         if self._loop is not None:
             self._loop.call_soon_threadsafe(self._enqueue_test, text)
 
+    def reload_config(self, settings: EngineSettings, routes: Mapping[str, RouteOptions]) -> None:
+        """Apply new settings, also while running (thread-safe).
+
+        Changes filters, relay language, templates, event toggles, gift delay
+        and compact mode without a restart. Adding or removing a destination
+        or changing the TikTok username still needs Stop and Start.
+
+        Args:
+            settings: New engine-wide settings.
+            routes: New per-destination options, by destination name.
+        """
+        routes = dict(routes)
+        loop = self._loop
+        if loop is not None and self.is_running:
+            loop.call_soon_threadsafe(self._apply_reload, settings, routes)
+        else:
+            self._apply_reload(settings, routes)
+
     # --- engine thread ------------------------------------------------------
 
     def _thread_main(self) -> None:
@@ -271,39 +304,99 @@ class RelayEngine:
     def _make_active(self, setup: DestinationSetup, translator: Translator) -> _ActiveDestination:
         """Create the route and limiter for a started destination."""
         destination = setup.destination
-        batcher = None
-        if setup.compact_mode:
-            batcher = ChatBatcher(
-                prefix=translator.text("relay.compact_prefix"),
-                window=self._settings.compact_window,
-                max_length=destination.max_length,
-            )
         route = Route(
             name=destination.name,
             toggles=dict(setup.toggles),
-            formatter=MessageFormatter(
-                default_templates(translator), destination.max_length, setup.templates
-            ),
+            formatter=self._make_formatter(destination, setup.templates, translator),
             queue=OutQueue(destination.max_queue_size),
-            batcher=batcher,
+            batcher=self._make_batcher(destination, translator) if setup.compact_mode else None,
         )
         return _ActiveDestination(setup, route, RateLimiter(destination.rate_rules))
+
+    @staticmethod
+    def _make_formatter(
+        destination: Destination, templates: Mapping[str, str], translator: Translator
+    ) -> MessageFormatter:
+        """Formatter with the language's default templates and the user's own ones."""
+        return MessageFormatter(default_templates(translator), destination.max_length, templates)
+
+    def _make_batcher(self, destination: Destination, translator: Translator) -> ChatBatcher:
+        """Compact-mode batcher for a destination."""
+        return ChatBatcher(
+            prefix=translator.text("relay.compact_prefix"),
+            window=self._settings.compact_window,
+            max_length=destination.max_length,
+        )
+
+    def _make_filter(self, translator: Translator) -> MessageFilter:
+        """Chat filter from the current settings."""
+        settings = self._settings
+        return MessageFilter(
+            spam_phrases=settings.spam_phrases,
+            profanity_words=settings.rude_words,
+            link_text=translator.text("relay.link_placeholder"),
+            duplicate_window=settings.duplicate_window,
+        )
 
     def _build_pipeline(self, translator: Translator) -> Pipeline:
         """Create the pipeline for the started destinations."""
         settings = self._settings
         return Pipeline(
-            message_filter=MessageFilter(
-                spam_phrases=settings.spam_phrases,
-                profanity_words=settings.rude_words,
-                link_text=translator.text("relay.link_placeholder"),
-                duplicate_window=settings.duplicate_window,
-            ),
+            message_filter=self._make_filter(translator),
             deduper=SocialDeduper(repeat_window=settings.share_repeat_window),
             gift_merger=GiftMerger(delay=settings.gift_delay),
             routes=[active.route for active in self._active],
             counters=self.counters,
         )
+
+    def _apply_reload(self, settings: EngineSettings, routes: dict[str, RouteOptions]) -> None:
+        """Apply new settings (runs in the engine thread, or directly when stopped)."""
+        self._settings = settings
+        self._setups = [self._updated_setup(setup, routes) for setup in self._setups]
+        pipeline = self._pipeline
+        if pipeline is None:
+            return
+        translator = Translator(settings.relay_language)
+        pipeline.message_filter = self._make_filter(translator)
+        pipeline.gift_merger.delay = settings.gift_delay
+        pipeline.deduper.repeat_window = settings.share_repeat_window
+        for active in self._active:
+            active.setup = self._updated_setup(active.setup, routes)
+            self._apply_route(active, translator)
+        logger.info("Settings reloaded while running")
+
+    @staticmethod
+    def _updated_setup(
+        setup: DestinationSetup, routes: dict[str, RouteOptions]
+    ) -> DestinationSetup:
+        """A copy of ``setup`` with new options, if ``routes`` has some for it."""
+        options = routes.get(setup.destination.name)
+        if options is None:
+            return setup
+        return replace(
+            setup,
+            toggles=dict(options.toggles),
+            templates=dict(options.templates),
+            compact_mode=options.compact_mode,
+        )
+
+    def _apply_route(self, active: _ActiveDestination, translator: Translator) -> None:
+        """Update one running route from its (new) setup."""
+        assert self._pipeline is not None
+        setup, route = active.setup, active.route
+        destination = setup.destination
+        route.toggles = dict(setup.toggles)
+        route.formatter = self._make_formatter(destination, setup.templates, translator)
+        if setup.compact_mode and route.batcher is None:
+            route.batcher = self._make_batcher(destination, translator)
+        elif setup.compact_mode and route.batcher is not None:
+            # Keep the chat lines already collected; only update the settings.
+            route.batcher.prefix = translator.text("relay.compact_prefix")
+            route.batcher.window = self._settings.compact_window
+        elif route.batcher is not None:
+            # Compact mode turned off: send what was collected, then stop batching.
+            self._pipeline.flush_batcher(route)
+            route.batcher = None
 
     async def _run_source(self) -> None:
         """Run the source until cancelled; report if it crashes."""
