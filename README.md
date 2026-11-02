@@ -55,6 +55,8 @@ Try the relay without the app, using the command-line tool:
 Press Ctrl+C to stop; a summary of sent, dropped and filtered messages follows.
 Run `tools\cli.py --help` for all options.
 
+How the pieces fit together is explained in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
 Project layout:
 
 | Folder | Contents |
