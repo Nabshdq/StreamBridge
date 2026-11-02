@@ -6,6 +6,9 @@ import pytest
 
 import cli
 from fake_source import FakeSource
+from streambridge.auth import twitch_device
+from streambridge.core.secrets import TWITCH_BOT_KEY, TWITCH_BROADCASTER_KEY, MemoryStore
+from streambridge.destinations.twitch import TwitchDestination
 from streambridge.sources.tiktok import TikTokSource
 
 
@@ -60,6 +63,66 @@ def test_print_raw(capsys: pytest.CaptureFixture[str]) -> None:
     """Raw social data is printed on one line to stderr."""
     cli.print_raw({"key": "pm_mt_guidance_share", "share_type": 1})
     assert "[raw] key='pm_mt_guidance_share' share_type=1" in capsys.readouterr().err
+
+
+@pytest.fixture
+def no_client_id(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Simulate the Twitch app not being registered yet."""
+    monkeypatch.setattr(twitch_device, "TWITCH_CLIENT_ID", "")
+    monkeypatch.delenv(twitch_device.CLIENT_ID_ENV, raising=False)
+
+
+@pytest.fixture
+def memory_keyring(monkeypatch: pytest.MonkeyPatch) -> MemoryStore:
+    """Keep the CLI away from the real Windows Credential Manager."""
+    store = MemoryStore()
+    monkeypatch.setattr(cli, "KeyringStore", lambda: store)
+    return store
+
+
+def test_twitch_logout_forgets_both_logins(memory_keyring: MemoryStore) -> None:
+    """--twitch-logout removes the streamer and bot logins."""
+    memory_keyring.set(TWITCH_BROADCASTER_KEY, "x")
+    memory_keyring.set(TWITCH_BOT_KEY, "y")
+    assert cli.main(["--twitch-logout"]) == 0
+    assert memory_keyring.values == {}
+
+
+def test_twitch_login_without_app_explains(
+    no_client_id: None, memory_keyring: MemoryStore, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Logging in before the Twitch app exists fails with a clear message."""
+    assert cli.main(["--twitch-login"]) == 1
+    assert "not registered yet" in capsys.readouterr().err
+
+
+def test_relay_to_twitch_without_app_explains(
+    no_client_id: None, memory_keyring: MemoryStore, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """--twitch without a client ID stops before starting the engine."""
+    assert cli.main(["--fake", "--twitch"]) == 1
+    assert "not registered yet" in capsys.readouterr().err
+
+
+def test_twitch_channel_needs_twitch() -> None:
+    """--twitch-channel alone is a usage error."""
+    with pytest.raises(SystemExit):
+        cli.main(["--fake", "--twitch-channel", "streamer"])
+
+
+@pytest.mark.parametrize(
+    ("extra", "bot_mode"), [([], False), (["--twitch-channel", "@Streamer"], True)]
+)
+def test_build_twitch_destination_modes(
+    monkeypatch: pytest.MonkeyPatch, extra: list[str], bot_mode: bool
+) -> None:
+    """A channel name switches to bot mode (with the bot login)."""
+    monkeypatch.setenv(twitch_device.CLIENT_ID_ENV, "dev-client")
+    args = cli.build_parser().parse_args(["--fake", "--twitch", *extra])
+    destination = cli.build_twitch_destination(args, MemoryStore())
+    assert isinstance(destination, TwitchDestination)
+    assert destination._bot_mode is bot_mode
+    assert destination._account_key == (TWITCH_BOT_KEY if bot_mode else TWITCH_BROADCASTER_KEY)
 
 
 def test_cli_fake_run_prints_messages(tmp_home: Path, capsys: pytest.CaptureFixture[str]) -> None:

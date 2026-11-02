@@ -8,22 +8,43 @@ Examples::
     python tools/cli.py --tiktok @username --lang id
     python tools/cli.py --tiktok @username --show-raw   # print raw follow/share data
 
+    python tools/cli.py --twitch-login                  # log in the streamer account
+    python tools/cli.py --twitch-login-bot              # log in a bot account
+    python tools/cli.py --twitch-logout                 # forget both logins
+    python tools/cli.py --tiktok @username --twitch     # relay to real Twitch chat
+    python tools/cli.py --tiktok @username --twitch --twitch-channel streamer  # bot
+
 Events (simulated with ``--fake``, or from a real LIVE with ``--tiktok``) are
 relayed to two console destinations that behave like Twitch (500 characters,
 80 messages / 30 s, never drops) and YouTube (200 characters, compact mode,
-queue of 30).
+queue of 30). With ``--twitch`` the real Twitch chat replaces the Twitch one.
 
 ``--euler-key`` is only used while the program runs; it is never saved.
+Twitch logins are saved in the Windows Credential Manager.
 """
 
 import argparse
+import asyncio
 import logging
 import sys
 import time
+import webbrowser
 from pathlib import Path
 from typing import Any
 
+import httpx
+
 from fake_source import FakeSource
+from streambridge.auth.twitch_device import (
+    BOT_SCOPES,
+    BROADCASTER_SCOPES,
+    DeviceCode,
+    TwitchAccount,
+    TwitchAuth,
+    TwitchAuthError,
+    TwitchSetupError,
+    get_client_id,
+)
 from streambridge.core.config import AppConfig, load_config
 from streambridge.core.engine import DestinationSetup, EngineListener, EngineSettings, RelayEngine
 from streambridge.core.events import ConnectionStatus
@@ -32,7 +53,15 @@ from streambridge.core.logging_setup import setup_logging
 from streambridge.core.outqueue import YOUTUBE_MAX_QUEUE
 from streambridge.core.pipeline import Counters
 from streambridge.core.ratelimit import TWITCH_RULES, YOUTUBE_RULES
+from streambridge.core.secrets import (
+    TWITCH_BOT_KEY,
+    TWITCH_BROADCASTER_KEY,
+    KeyringStore,
+    SecretStore,
+)
+from streambridge.destinations.base import Destination
 from streambridge.destinations.console import ConsoleDestination
+from streambridge.destinations.twitch import TwitchDestination
 from streambridge.sources.base import Source
 from streambridge.sources.tiktok import TikTokSource
 
@@ -84,12 +113,43 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--seed", type=int, default=None, help="random seed for --fake")
     parser.add_argument("--config", type=Path, default=None, help="settings file to read")
+
+    twitch = parser.add_argument_group("Twitch")
+    login = twitch.add_mutually_exclusive_group()
+    login.add_argument("--twitch-login", action="store_true", help="log in the streamer account")
+    login.add_argument("--twitch-login-bot", action="store_true", help="log in a bot account")
+    login.add_argument("--twitch-logout", action="store_true", help="forget both Twitch logins")
+    twitch.add_argument(
+        "--twitch", action="store_true", help="send to the real Twitch chat (not twitch-sim)"
+    )
+    twitch.add_argument(
+        "--twitch-channel",
+        metavar="NAME",
+        default="",
+        help="channel the bot posts to (bot mode; the bot must be a moderator there)",
+    )
     return parser
 
 
-def build_destinations(config: AppConfig) -> list[DestinationSetup]:
-    """Two console destinations that simulate Twitch and YouTube."""
-    twitch = ConsoleDestination("twitch-sim", TWITCH_MAX_LENGTH, TWITCH_RULES, max_queue_size=None)
+def build_twitch_destination(args: argparse.Namespace, store: SecretStore) -> Destination:
+    """The real Twitch destination: streamer mode, or bot mode with --twitch-channel."""
+    bot_mode = bool(args.twitch_channel)
+    return TwitchDestination(
+        client_id=get_client_id(),
+        store=store,
+        account_key=TWITCH_BOT_KEY if bot_mode else TWITCH_BROADCASTER_KEY,
+        channel=args.twitch_channel,
+        bot_mode=bot_mode,
+    )
+
+
+def build_destinations(
+    config: AppConfig, twitch_destination: Destination | None = None
+) -> list[DestinationSetup]:
+    """Twitch (simulated unless a real one is given) and a simulated YouTube."""
+    twitch = twitch_destination or ConsoleDestination(
+        "twitch-sim", TWITCH_MAX_LENGTH, TWITCH_RULES, max_queue_size=None
+    )
     youtube = ConsoleDestination(
         "youtube-sim", YOUTUBE_MAX_LENGTH, YOUTUBE_RULES, max_queue_size=YOUTUBE_MAX_QUEUE
     )
@@ -121,6 +181,41 @@ def build_source(args: argparse.Namespace) -> Source:
     return FakeSource(interval=args.interval, seed=args.seed)
 
 
+def show_device_code(device: DeviceCode) -> None:
+    """Tell the user how to approve the login, and open the page."""
+    print(f"\nOpen {device.verification_uri}", file=sys.stderr)
+    print(f"and confirm the code: {device.user_code}", file=sys.stderr)
+    print("Waiting for you to click Authorize on Twitch...", file=sys.stderr)
+    webbrowser.open(device.verification_uri)
+
+
+async def twitch_login(client_id: str, store: SecretStore, bot: bool) -> str:
+    """Run the Twitch device login and save it. Returns the logged-in name."""
+    async with httpx.AsyncClient() as http:
+        account = TwitchAccount(
+            TwitchAuth(client_id, http), store, TWITCH_BOT_KEY if bot else TWITCH_BROADCASTER_KEY
+        )
+        tokens = await account.login(BOT_SCOPES if bot else BROADCASTER_SCOPES, show_device_code)
+    return tokens.login
+
+
+def run_twitch_account_command(args: argparse.Namespace, store: SecretStore) -> int:
+    """Handle --twitch-login, --twitch-login-bot and --twitch-logout."""
+    if args.twitch_logout:
+        store.delete(TWITCH_BROADCASTER_KEY)
+        store.delete(TWITCH_BOT_KEY)
+        print("Twitch logins removed from this PC.", file=sys.stderr)
+        return 0
+    try:
+        login = asyncio.run(twitch_login(get_client_id(), store, bot=args.twitch_login_bot))
+    except (TwitchSetupError, TwitchAuthError) as error:
+        print(f"[error] {error}", file=sys.stderr)
+        return 1
+    role = "bot" if args.twitch_login_bot else "streamer"
+    print(f"Logged in to Twitch as @{login} ({role}). The login is saved.", file=sys.stderr)
+    return 0
+
+
 def print_summary(counters: Counters | None) -> None:
     """Print the final counters."""
     if counters is None:
@@ -140,8 +235,11 @@ def main(argv: list[str] | None = None) -> int:
     """Run the CLI. Returns the process exit code."""
     parser = build_parser()
     args = parser.parse_args(argv)
-    if not args.fake and not args.tiktok:
-        parser.error("choose a source: --fake or --tiktok USERNAME")
+    account_command = args.twitch_login or args.twitch_login_bot or args.twitch_logout
+    if not account_command and not args.fake and not args.tiktok:
+        parser.error("choose a source: --fake or --tiktok USERNAME (or a --twitch-login option)")
+    if args.twitch_channel and not args.twitch:
+        parser.error("--twitch-channel needs --twitch")
 
     # Emoji must not crash the program when output is redirected to a file.
     for stream in (sys.stdout, sys.stderr):
@@ -149,13 +247,22 @@ def main(argv: list[str] | None = None) -> int:
             stream.reconfigure(encoding="utf-8", errors="replace")
     setup_logging(console_level=logging.WARNING)
 
+    store = KeyringStore()
+    if account_command:
+        return run_twitch_account_command(args, store)
+
     config = load_config(args.config)
     if args.lang:
         config.relay_language = args.lang
+    try:
+        twitch = build_twitch_destination(args, store) if args.twitch else None
+    except TwitchSetupError as error:
+        print(f"[error] {error}", file=sys.stderr)
+        return 1
     listener = PrintingListener()
     engine = RelayEngine(
         source=build_source(args),
-        destinations=build_destinations(config),
+        destinations=build_destinations(config, twitch),
         settings=EngineSettings.from_config(config),
         listener=listener,
     )
