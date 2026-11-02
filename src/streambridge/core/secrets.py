@@ -21,6 +21,7 @@ SERVICE_NAME = "StreamBridge"
 
 TWITCH_BROADCASTER_KEY = "twitch.broadcaster"
 TWITCH_BOT_KEY = "twitch.bot"
+TIKTOK_EULER_KEY = "tiktok.euler_key"
 
 
 class SecretStore(Protocol):
