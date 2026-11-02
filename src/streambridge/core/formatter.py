@@ -39,6 +39,28 @@ GIFT_ICONS: dict[str, str] = {
     "galaxy": "🌌",
     "lion": "🦁",
     "universe": "🪐",
+    # Added after real LIVE tests; unknown gifts still get the gift box.
+    "goat": "🐐",
+    "heart": "❤️",
+    "hearts": "💕",
+    "mishka bear": "🧸",
+    "teddy bear": "🧸",
+    "swan": "🦢",
+    "rainbow": "🌈",
+    "rocket": "🚀",
+    "interstellar": "🚀",
+    "airplane": "✈️",
+    "motorcycle": "🏍️",
+    "whale diving": "🐋",
+    "pizza": "🍕",
+    "panda": "🐼",
+    "butterfly": "🦋",
+    "cake": "🎂",
+    "star": "⭐",
+    "crown": "👑",
+    "drama queen": "👑",
+    "unicorn fantasy": "🦄",
+    "lightning bolt": "⚡",
 }
 
 _FORMAT_ERRORS = (ValueError, IndexError, KeyError, AttributeError, TypeError)

@@ -102,4 +102,5 @@ def test_truncate_short_text_unchanged() -> None:
 def test_gift_icon_lookup() -> None:
     """Known gifts get their emoji; unknown gifts get a gift box."""
     assert gift_icon(" ROSE ") == "🌹"
+    assert gift_icon("GOAT") == "🐐"  # seen on a real LIVE
     assert gift_icon("Something New") == DEFAULT_GIFT_ICON
