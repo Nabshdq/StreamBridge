@@ -22,7 +22,10 @@ classifiers = [
     "Topic :: Communications :: Chat",
 ]
 # Runtime dependencies are added in the phase that first needs them.
-dependencies = []
+# TikTokLive is unofficial and changes often: pin it exactly, upgrade on purpose.
+dependencies = [
+    "TikTokLive==7.0.1",
+]
 
 [project.optional-dependencies]
 dev = [
