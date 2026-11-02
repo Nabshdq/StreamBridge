@@ -1,0 +1,11 @@
+# Keeps the GitHub Actions used by CI up to date (one pull request per week at most).
+# Python packages are not included on purpose: TikTokLive is pinned and is only
+# upgraded by hand after testing against a real LIVE.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "ci"
