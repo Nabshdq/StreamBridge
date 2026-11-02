@@ -154,7 +154,8 @@ def test_like() -> None:
         ("pm_main_follow_message_viewer_2", "follow"),
         ("pm_mt_guidance_share", "share"),
         ("pm_mt_guidance_viewer_5_share", "share"),
-        ("pm_mt_live_repost_notice", "repost"),
+        # Seen on a real LIVE (2026-11-02): repost has its own key, action=4.
+        ("ttlive_repost_commentsarea_repostedusername_im", "repost"),
     ],
 )
 def test_social_kinds(key: str, kind: str) -> None:

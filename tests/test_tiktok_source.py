@@ -41,7 +41,7 @@ class FakeClient:
         self.web = SimpleNamespace(close=self._close_web)
         self.web_closed = False
 
-    def on(self, event_type: type, handler: Callable[[Any], None]) -> None:
+    def add_listener(self, event_type: type, handler: Callable[[Any], None]) -> None:
         self.handlers[event_type] = handler
 
     async def start(self, fetch_live_check: bool = True) -> "asyncio.Task[None]":
@@ -245,6 +245,36 @@ def test_raw_social_data_goes_to_listener() -> None:
         asyncio.run(source.run(harness.events.append, lambda s, d: None))
     assert raw[0]["key"] == "pm_mt_guidance_share"
     assert harness.events[0].kind == "share"
+
+
+def test_handlers_register_on_a_real_tiktoklive_client() -> None:
+    """Regression: registering on the real client must not crash (no network used)."""
+
+    async def scenario() -> None:
+        client = tiktok.create_client("grndpagaming", None)
+        source = TikTokSource("grndpagaming")
+        source._add_handlers(client, lambda e: None, lambda s, d: None, tiktok._AttemptState())
+        try:
+            for event_type in (CommentEvent, GiftEvent, SocialEvent, ConnectEvent, LiveEndEvent):
+                assert client.has_listener(event_type)
+        finally:
+            await client.web.close()
+
+    asyncio.run(scenario())
+
+
+def test_setup_failure_is_retried_not_fatal() -> None:
+    """If preparing a connection fails, the source backs off and tries again."""
+
+    class BrokenClient(FakeClient):
+        def add_listener(self, event_type: type, handler: Callable[[Any], None]) -> None:
+            raise AttributeError("library changed")
+
+    harness = Harness([[], []], max_sleeps=2)
+    harness.factory = lambda username, key: BrokenClient([])  # type: ignore[method-assign]
+    harness.run()
+    assert harness.sleeps == [5.0, 10.0]
+    assert harness.status_names.count(ConnectionStatus.ERROR) == 2
 
 
 def test_stop_closes_the_client() -> None:

@@ -308,10 +308,14 @@ class TikTokSource(Source):
 
     async def _connect_once(self, emit: EmitEvent, report_status: ReportStatus) -> Attempt:
         """Make one connection, relay events until it ends, and say how it ended."""
-        client = self._client_factory(self.username, self._euler_key)
         state = _AttemptState()
-        self._add_handlers(client, emit, report_status, state)
         try:
+            client = self._client_factory(self.username, self._euler_key)
+        except Exception as error:
+            logger.exception("Could not create the TikTok client")
+            return describe_error(error)
+        try:
+            self._add_handlers(client, emit, report_status, state)
             connection = await client.start(fetch_live_check=True)
             await connection
         except asyncio.CancelledError:
@@ -358,7 +362,9 @@ class TikTokSource(Source):
             SocialEvent: on_social,
         }
         for event_type, handler in handlers.items():
-            client.on(event_type, _safe(handler))
+            # TikTokLive 7.0.1: use add_listener(). Its on(event, handler) form
+            # converts the event class to a name twice and crashes.
+            client.add_listener(event_type, _safe(handler))
 
     @staticmethod
     async def _close(client: Any) -> None:
