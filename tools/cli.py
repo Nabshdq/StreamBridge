@@ -5,10 +5,15 @@ Examples::
     python tools/cli.py --fake
     python tools/cli.py --fake --lang id --duration 30
     python tools/cli.py --fake --interval 0.05    # flood: watch the rate limit
+    python tools/cli.py --tiktok @username --lang id
+    python tools/cli.py --tiktok @username --show-raw   # print raw follow/share data
 
-``--fake`` relays simulated TikTok events to two console destinations that
-behave like Twitch (500 characters, 80 messages / 30 s, never drops) and
-YouTube (200 characters, compact mode, queue of 30).
+Events (simulated with ``--fake``, or from a real LIVE with ``--tiktok``) are
+relayed to two console destinations that behave like Twitch (500 characters,
+80 messages / 30 s, never drops) and YouTube (200 characters, compact mode,
+queue of 30).
+
+``--euler-key`` is only used while the program runs; it is never saved.
 """
 
 import argparse
@@ -16,6 +21,7 @@ import logging
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 from fake_source import FakeSource
 from streambridge.core.config import AppConfig, load_config
@@ -27,6 +33,8 @@ from streambridge.core.outqueue import YOUTUBE_MAX_QUEUE
 from streambridge.core.pipeline import Counters
 from streambridge.core.ratelimit import TWITCH_RULES, YOUTUBE_RULES
 from streambridge.destinations.console import ConsoleDestination
+from streambridge.sources.base import Source
+from streambridge.sources.tiktok import TikTokSource
 
 
 class PrintingListener(EngineListener):
@@ -60,7 +68,13 @@ class PrintingListener(EngineListener):
 def build_parser() -> argparse.ArgumentParser:
     """Command-line options."""
     parser = argparse.ArgumentParser(description="Run StreamBridge without the UI.")
-    parser.add_argument("--fake", action="store_true", help="use simulated TikTok events")
+    source = parser.add_mutually_exclusive_group()
+    source.add_argument("--fake", action="store_true", help="use simulated TikTok events")
+    source.add_argument("--tiktok", metavar="USERNAME", help="read a real TikTok LIVE")
+    parser.add_argument("--euler-key", default=None, help="optional Euler Stream API key")
+    parser.add_argument(
+        "--show-raw", action="store_true", help="print raw follow/share data (finding reposts)"
+    )
     parser.add_argument("--lang", choices=("auto", "en", "id"), help="language of relayed text")
     parser.add_argument(
         "--duration", type=float, default=None, help="stop after N seconds (default: Ctrl+C)"
@@ -90,6 +104,23 @@ def build_destinations(config: AppConfig) -> list[DestinationSetup]:
     ]
 
 
+def print_raw(raw: dict[str, Any]) -> None:
+    """Print raw follow/share data on one line."""
+    fields = " ".join(f"{key}={value!r}" for key, value in raw.items())
+    print(f"[raw] {fields}", file=sys.stderr)
+
+
+def build_source(args: argparse.Namespace) -> Source:
+    """Create the source chosen on the command line."""
+    if args.tiktok:
+        return TikTokSource(
+            args.tiktok,
+            euler_key=args.euler_key,
+            raw_listener=print_raw if args.show_raw else None,
+        )
+    return FakeSource(interval=args.interval, seed=args.seed)
+
+
 def print_summary(counters: Counters | None) -> None:
     """Print the final counters."""
     if counters is None:
@@ -107,9 +138,10 @@ def print_summary(counters: Counters | None) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     """Run the CLI. Returns the process exit code."""
-    args = build_parser().parse_args(argv)
-    if not args.fake:
-        build_parser().error("choose a source: --fake (real TikTok comes in Phase 2)")
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if not args.fake and not args.tiktok:
+        parser.error("choose a source: --fake or --tiktok USERNAME")
 
     # Emoji must not crash the program when output is redirected to a file.
     for stream in (sys.stdout, sys.stderr):
@@ -122,7 +154,7 @@ def main(argv: list[str] | None = None) -> int:
         config.relay_language = args.lang
     listener = PrintingListener()
     engine = RelayEngine(
-        source=FakeSource(interval=args.interval, seed=args.seed),
+        source=build_source(args),
         destinations=build_destinations(config),
         settings=EngineSettings.from_config(config),
         listener=listener,

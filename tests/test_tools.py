@@ -6,6 +6,7 @@ import pytest
 
 import cli
 from fake_source import FakeSource
+from streambridge.sources.tiktok import TikTokSource
 
 
 def test_fake_source_is_repeatable_with_seed() -> None:
@@ -29,6 +30,36 @@ def test_cli_requires_a_source() -> None:
     """Without --fake the CLI explains what to do."""
     with pytest.raises(SystemExit):
         cli.main([])
+
+
+def test_cli_rejects_two_sources() -> None:
+    """--fake and --tiktok cannot be used together."""
+    with pytest.raises(SystemExit):
+        cli.main(["--fake", "--tiktok", "someone"])
+
+
+def test_cli_builds_tiktok_source() -> None:
+    """--tiktok creates a TikTok source with a clean username and the optional key."""
+    args = cli.build_parser().parse_args(
+        ["--tiktok", "@grndpagaming", "--euler-key", "k", "--show-raw"]
+    )
+    source = cli.build_source(args)
+    assert isinstance(source, TikTokSource)
+    assert source.username == "grndpagaming"
+    assert source._euler_key == "k"
+    assert source._raw_listener is cli.print_raw
+
+
+def test_cli_builds_fake_source() -> None:
+    """--fake still creates the simulated source."""
+    args = cli.build_parser().parse_args(["--fake", "--seed", "1"])
+    assert isinstance(cli.build_source(args), FakeSource)
+
+
+def test_print_raw(capsys: pytest.CaptureFixture[str]) -> None:
+    """Raw social data is printed on one line to stderr."""
+    cli.print_raw({"key": "pm_mt_guidance_share", "share_type": 1})
+    assert "[raw] key='pm_mt_guidance_share' share_type=1" in capsys.readouterr().err
 
 
 def test_cli_fake_run_prints_messages(tmp_home: Path, capsys: pytest.CaptureFixture[str]) -> None:
