@@ -348,7 +348,9 @@ class TikTokSource(Source):
 
         def on_social(event: Any) -> None:
             raw = social_raw_data(event)
-            logger.info("TikTok social event raw data: %s", raw)
+            # Debug level: not written to the log file by default. Use --show-raw
+            # to see this data when TikTok's codes need investigating again.
+            logger.debug("TikTok social event raw data: %s", raw)
             if self._raw_listener is not None:
                 self._raw_listener(raw)
             _emit_mapped(emit, map_social(event))

@@ -1,6 +1,7 @@
 """Tests for TikTokSource's connect / wait / reconnect logic (fake client, no network)."""
 
 import asyncio
+import logging
 from collections.abc import Callable, Sequence
 from types import SimpleNamespace
 from typing import Any
@@ -245,6 +246,21 @@ def test_raw_social_data_goes_to_listener() -> None:
         asyncio.run(source.run(harness.events.append, lambda s, d: None))
     assert raw[0]["key"] == "pm_mt_guidance_share"
     assert harness.events[0].kind == "share"
+
+
+def test_raw_social_data_is_only_logged_at_debug(caplog: pytest.LogCaptureFixture) -> None:
+    """Raw follow/share data stays out of the normal (INFO) log."""
+    common = SimpleNamespace(display_text=SimpleNamespace(key="pm_main_follow_message_viewer_2"))
+    script: list[Step] = [[CONNECT, (SocialEvent, SimpleNamespace(user=user(), common=common))]]
+
+    caplog.set_level(logging.INFO, logger="streambridge.sources.tiktok")
+    Harness(script).run()
+    assert "raw data" not in caplog.text
+
+    caplog.clear()
+    caplog.set_level(logging.DEBUG, logger="streambridge.sources.tiktok")
+    Harness(script).run()
+    assert "raw data" in caplog.text
 
 
 def test_handlers_register_on_a_real_tiktoklive_client() -> None:
