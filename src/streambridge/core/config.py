@@ -28,7 +28,7 @@ CONFIG_VERSION = 1
 
 @dataclass
 class EventToggles:
-    """Which event kinds a destination receives. All on by default."""
+    """Which event kinds a destination receives. All on by default (Twitch)."""
 
     chat: bool = True
     gift: bool = True
@@ -44,6 +44,16 @@ class EventToggles:
     def as_dict(self) -> dict[str, bool]:
         """Return the toggles as ``{kind: enabled}``."""
         return {kind: self.is_enabled(kind) for kind in EVENT_KINDS}
+
+
+def youtube_default_toggles() -> EventToggles:
+    """YouTube defaults: only chat (batched by compact mode) and gifts.
+
+    YouTube allows about 500 messages a day (10,000 quota units, 20 per message).
+    Follows, likes, shares and reposts are frequent on busy LIVEs and would use
+    the daily quota up in minutes, so they start off; users can turn them on.
+    """
+    return EventToggles(follow=False, like=False, share=False, repost=False)
 
 
 @dataclass
@@ -78,7 +88,7 @@ class YouTubeSettings:
     """YouTube destination settings."""
 
     enabled: bool = False
-    events: EventToggles = field(default_factory=EventToggles)
+    events: EventToggles = field(default_factory=youtube_default_toggles)
     templates: dict[str, str] = field(default_factory=dict)
     compact_mode: bool = True
     use_bot_account: bool = False
@@ -198,9 +208,11 @@ def _language(data: dict[str, Any], key: str) -> str:
     return value if value in LANGUAGE_SETTINGS else AUTO_LANGUAGE
 
 
-def _toggles_from(data: dict[str, Any]) -> EventToggles:
-    """Build event toggles (every kind defaults to on); unknown kinds are ignored."""
-    return EventToggles(**{kind: _bool(data, kind, True) for kind in EVENT_KINDS})
+def _toggles_from(data: dict[str, Any], defaults: EventToggles) -> EventToggles:
+    """Build event toggles; missing kinds use ``defaults``, unknown kinds are ignored."""
+    return EventToggles(
+        **{kind: _bool(data, kind, defaults.is_enabled(kind)) for kind in EVENT_KINDS}
+    )
 
 
 def _templates_from(data: dict[str, Any]) -> dict[str, str]:
@@ -226,7 +238,7 @@ def _twitch_from(data: dict[str, Any]) -> TwitchSettings:
     """Build Twitch settings."""
     return TwitchSettings(
         enabled=_bool(data, "enabled", False),
-        events=_toggles_from(_section(data, "events")),
+        events=_toggles_from(_section(data, "events"), EventToggles()),
         templates=_templates_from(_section(data, "templates")),
         use_bot_account=_bool(data, "use_bot_account", False),
         channel_name=_text(data, "channel_name", ""),
@@ -237,7 +249,7 @@ def _youtube_from(data: dict[str, Any]) -> YouTubeSettings:
     """Build YouTube settings."""
     return YouTubeSettings(
         enabled=_bool(data, "enabled", False),
-        events=_toggles_from(_section(data, "events")),
+        events=_toggles_from(_section(data, "events"), youtube_default_toggles()),
         templates=_templates_from(_section(data, "templates")),
         compact_mode=_bool(data, "compact_mode", True),
         use_bot_account=_bool(data, "use_bot_account", False),

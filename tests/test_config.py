@@ -26,7 +26,28 @@ def test_defaults() -> None:
     assert config.filters.spam_phrases == list(DEFAULT_SPAM_PHRASES)
     for kind in ("chat", "gift", "follow", "like", "share", "repost"):
         assert config.twitch.events.is_enabled(kind)
-        assert config.youtube.events.is_enabled(kind)
+
+
+def test_youtube_defaults_save_quota() -> None:
+    """YouTube starts with chat and gifts only; frequent events start off."""
+    youtube = AppConfig().youtube.events
+    assert youtube.as_dict() == {
+        "chat": True,
+        "gift": True,
+        "follow": False,
+        "like": False,
+        "share": False,
+        "repost": False,
+    }
+
+
+def test_missing_toggles_use_each_destinations_defaults() -> None:
+    """A config file without toggles gets Twitch all-on and YouTube chat+gift."""
+    config = AppConfig.from_dict({"twitch": {}, "youtube": {"events": {"like": True}}})
+    assert all(config.twitch.events.as_dict().values())
+    assert config.youtube.events.like is True  # the user's choice is kept
+    assert config.youtube.events.follow is False  # missing -> YouTube default
+    assert config.youtube.events.gift is True
 
 
 def test_save_and_load_round_trip(tmp_home: Path) -> None:
