@@ -50,6 +50,11 @@ pythonpath = ["tools"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 addopts = "-ra"
+filterwarnings = [
+    # Deprecation notices raised inside third-party libraries, not our code.
+    "ignore::DeprecationWarning:websockets",
+    "ignore::DeprecationWarning:TikTokLive",
+]
 
 [tool.ruff]
 line-length = 100
