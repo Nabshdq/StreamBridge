@@ -77,6 +77,11 @@ select = [
     "N",   # naming conventions
 ]
 
+[tool.ruff.lint.per-file-ignores]
+# Qt's own API is camelCase (rowCount, roleNames, signal names), so overriding
+# or declaring it in the UI layer must keep those names.
+"src/streambridge/ui/*" = ["N802", "N815"]
+
 [tool.ruff.format]
 # Do not reformat code samples inside Markdown docs.
 exclude = ["*.md"]
