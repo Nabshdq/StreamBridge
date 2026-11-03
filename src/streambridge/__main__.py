@@ -1,15 +1,17 @@
 """Entry point for ``python -m streambridge``.
 
-The real app (Qt window) is added in Phase 5. For now this only prints the version.
+Opens the desktop window. ``--fake`` relays simulated events (for trying the UI).
 """
 
-from streambridge import __version__
+import sys
 
 
-def main() -> None:
+def main() -> int:
     """Start StreamBridge."""
-    print(f"StreamBridge {__version__}")
+    from streambridge.app import run
+
+    return run()
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

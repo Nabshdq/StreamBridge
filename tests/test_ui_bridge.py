@@ -12,7 +12,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 pytest.importorskip("PySide6")
 
-from PySide6.QtCore import QCoreApplication  # noqa: E402
+from PySide6.QtGui import QGuiApplication  # noqa: E402
 
 from streambridge.core.assembly import SetupError  # noqa: E402
 from streambridge.core.events import ConnectionStatus  # noqa: E402
@@ -23,7 +23,7 @@ from streambridge.ui.bridge import SOURCE_ID, Backend  # noqa: E402
 @pytest.fixture(scope="module")
 def app():
     """One Qt application for all tests in this file."""
-    return QCoreApplication.instance() or QCoreApplication([])
+    return QGuiApplication.instance() or QGuiApplication([])
 
 
 class FakeEngine:
