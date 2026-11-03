@@ -248,3 +248,12 @@ def test_counters_and_feed_are_cleared_when_starting_again(app):
     assert backend.sentCount == 0
     assert backend.waitingCount == 0
     assert backend.feed.rowCount() == 0
+
+
+def test_cards_can_be_changed_while_stopped_but_not_while_running(app):
+    backend, _ = make_backend(app)
+    backend.set_connection_ids((SOURCE_ID, "youtube"))
+    assert [c["id"] for c in backend.connections] == [SOURCE_ID, "youtube"]
+    backend.start()
+    backend.set_connection_ids((SOURCE_ID,))
+    assert [c["id"] for c in backend.connections] == [SOURCE_ID, "youtube"]

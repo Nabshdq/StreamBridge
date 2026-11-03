@@ -13,7 +13,7 @@ from PySide6.QtQuickControls2 import QQuickStyle
 
 from streambridge.core import paths
 from streambridge.core.assembly import assemble_engine
-from streambridge.core.config import load_config
+from streambridge.core.config import AppConfig, load_config
 from streambridge.core.engine import DestinationSetup, EngineListener, EngineSettings, RelayEngine
 from streambridge.core.formatter import TWITCH_MAX_LENGTH, YOUTUBE_MAX_LENGTH
 from streambridge.core.logging_setup import setup_logging
@@ -30,11 +30,24 @@ QML_DIR = Path(__file__).resolve().parent / "ui" / "qml"
 FAKE_CONNECTIONS = (SOURCE_ID, "twitch-sim", "youtube-sim")
 
 
+def connection_ids(config: AppConfig) -> list[str]:
+    """Ids of the status cards to show: TikTok plus every enabled destination."""
+    ids = [SOURCE_ID]
+    ids += [name for name, part in (("twitch", config.twitch), ("youtube", config.youtube))
+            if part.enabled]
+    return ids
+
+
+def follow_enabled_destinations(backend: Backend, settings: SettingsBridge) -> None:
+    """Keep the dashboard cards in step with the destinations switched on in Settings."""
+    settings.changed.connect(lambda: backend.set_connection_ids(connection_ids(settings.config)))
+
+
 def fake_engine_factory() -> EngineFactory:
     """Engine factory for ``--fake``: simulated events into two console destinations."""
-    config = load_config()
 
     def build(listener: EngineListener) -> RelayEngine:
+        config = load_config()  # re-read on every Start so Settings changes apply
         # tools/ is a development folder, not part of the installed package.
         tools = Path(__file__).resolve().parents[2] / "tools"
         if str(tools) not in sys.path:
@@ -98,20 +111,19 @@ def run(argv: Sequence[str] | None = None) -> int:
     if fake:
         backend = Backend(fake_engine_factory(), FAKE_CONNECTIONS)
     else:
-        config = load_config()
-        ids = [SOURCE_ID]
-        ids += [n for n, s in (("twitch", config.twitch), ("youtube", config.youtube)) if s.enabled]
-        backend = Backend(real_engine_factory(), ids)
+        backend = Backend(real_engine_factory(), connection_ids(load_config()))
     app.aboutToQuit.connect(backend.shutdown)
 
     translator = UiTranslator()
     settings = SettingsBridge(translator)  # also applies the saved screen language
+    if not fake:
+        follow_enabled_destinations(backend, settings)
     engine = QQmlApplicationEngine()
     engine.addImportPath(str(QML_DIR))
     context = engine.rootContext()
     context.setContextProperty("backend", backend)
     context.setContextProperty("i18n", translator)
-    context.setContextProperty("settings", settings)
+    context.setContextProperty("appSettings", settings)
     engine.addImageProvider("icons", IconProvider(paths.resources_dir() / "icons"))
     engine.load(QUrl.fromLocalFile(str(QML_DIR / "Main.qml")))
     if not engine.rootObjects():

@@ -134,6 +134,18 @@ class Backend(QObject):
     rejectedCount = Property(int, lambda self: self._rejected, notify=countersChanged)
     waitingCount = Property(int, lambda self: self._waiting, notify=countersChanged)
 
+    def set_connection_ids(self, connection_ids: Sequence[str]) -> None:
+        """Change which status cards are shown. Ignored while the relay is running."""
+        if self._running or self._stopping:
+            return
+        wanted = list(connection_ids)
+        if wanted == [card["id"] for card in self._connections]:
+            return
+        self._connections = [
+            {"id": cid, "status": str(ConnectionStatus.STOPPED), "detail": ""} for cid in wanted
+        ]
+        self.connectionsChanged.emit()
+
     # --- Commands from QML --------------------------------------------------
 
     @Slot()
