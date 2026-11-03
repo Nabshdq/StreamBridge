@@ -209,3 +209,23 @@ def test_a_flood_from_the_engine_thread_keeps_the_feed_bounded(app):
     )
     assert backend.feed.rowCount() == 200
     assert backend.feed.row_at(199).text == "message 2999"
+
+
+def test_real_engine_with_fake_source_drives_the_whole_ui_state(app):
+    """Start the real RelayEngine (fake TikTok events) and watch the Backend follow it."""
+    from streambridge.app import FAKE_CONNECTIONS, fake_engine_factory
+
+    backend = Backend(fake_engine_factory(), FAKE_CONNECTIONS)
+    backend.start()
+    assert backend.lastError == ""
+    pump(app, lambda: backend.sentCount > 0 and backend.feed.rowCount() > 0, timeout=8.0)
+    assert backend.feed.rowCount() > 0
+    assert backend.sentCount > 0
+    assert all(c["status"] != "connecting" for c in backend.connections)
+
+    began = time.monotonic()
+    backend.stop()
+    assert time.monotonic() - began < 0.2
+    pump(app, lambda: not backend.running, timeout=10.0)
+    assert not backend.running
+    assert all(c["status"] == "stopped" for c in backend.connections)
