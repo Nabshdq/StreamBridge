@@ -95,21 +95,8 @@ ApplicationWindow {
 
             Dashboard { bridge: backend }
 
-            // Settings and About are filled in during Phase 6.
-            Placeholder { title: i18n.strings["ui.nav.settings"] }
-            Placeholder { title: i18n.strings["ui.nav.about"] }
-        }
-    }
-
-    component Placeholder: Item {
-        id: placeholder
-        property string title: ""
-        Text {
-            anchors.centerIn: parent
-            text: i18n.strings["ui.coming_soon"].replace("%1", () => placeholder.title)
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.bodySize
-            color: Theme.textSecondary
+            Settings { settings: appSettings }
+            About { settings: appSettings }
         }
     }
 }

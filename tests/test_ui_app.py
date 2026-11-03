@@ -19,6 +19,7 @@ from PySide6.QtQuickControls2 import QQuickStyle  # noqa: E402
 
 from streambridge.app import QML_DIR, register_fonts  # noqa: E402
 from streambridge.core import paths  # noqa: E402
+from streambridge.core.secrets import MemoryStore
 from streambridge.ui.bridge import Backend  # noqa: E402
 from streambridge.ui.icons import IconProvider  # noqa: E402
 from streambridge.ui.settings_bridge import SettingsBridge  # noqa: E402
@@ -51,10 +52,10 @@ def test_main_window_loads_and_follows_the_backend(tmp_path):
         engine = QQmlApplicationEngine()
         context = engine.rootContext()
         translator = UiTranslator("en")
-        settings = SettingsBridge(translator, tmp_path / "config.json")
+        settings = SettingsBridge(translator, tmp_path / "config.json", MemoryStore())
         context.setContextProperty("backend", backend)
         context.setContextProperty("i18n", translator)
-        context.setContextProperty("settings", settings)
+        context.setContextProperty("appSettings", settings)
         engine.addImageProvider("icons", IconProvider(paths.resources_dir() / "icons"))
         engine.load(QUrl.fromLocalFile(str(QML_DIR / "Main.qml")))
         assert engine.rootObjects(), problems
@@ -80,6 +81,27 @@ def test_main_window_loads_and_follows_the_backend(tmp_path):
             app.processEvents()
         assert "Dasbor" in _texts(root)
         assert "Dashboard" not in _texts(root)
+
+        # The Settings and About pages render and react to the saved values.
+        root.setProperty("page", 1)
+        root.grabWindow()
+        for _ in range(10):
+            app.processEvents()
+        assert "Frasa spam" in _texts(root)
+        settings.setYoutubeEnabled(True)
+        settings.setEvent("twitch", "chat", False)
+        settings.addWord("spam", "bagi bagi")
+        settings.setUiLanguage("en")
+        for _ in range(10):
+            app.processEvents()
+        root.grabWindow()
+        assert "Compact mode: join chat lines into one message" in _texts(root)
+        assert "bagi bagi" in _texts(root)
+        root.setProperty("page", 2)
+        root.grabWindow()
+        for _ in range(10):
+            app.processEvents()
+        assert "Open the log folder" in _texts(root)
     finally:
         qInstallMessageHandler(None)
 
