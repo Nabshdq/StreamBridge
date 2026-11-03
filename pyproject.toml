@@ -27,6 +27,8 @@ dependencies = [
     "TikTokLive==7.0.1",
     "httpx>=0.28.1",
     "keyring>=25.7",
+    # The desktop UI. Pinned exactly so the Qt runtime only changes on purpose.
+    "PySide6==6.12.0",
 ]
 
 [project.optional-dependencies]
