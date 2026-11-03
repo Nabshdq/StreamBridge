@@ -63,6 +63,9 @@ QtObject {
     readonly property int space4: 32
     readonly property int space6: 48
 
+    // Widest a text column may grow, so lines stay near 70 characters.
+    readonly property int contentWidth: 640
+
     // ---- Corner radius ----
     readonly property int radiusSmall: 8
     readonly property int radiusMedium: 12
