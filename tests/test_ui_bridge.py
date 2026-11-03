@@ -229,3 +229,22 @@ def test_real_engine_with_fake_source_drives_the_whole_ui_state(app):
     pump(app, lambda: not backend.running, timeout=10.0)
     assert not backend.running
     assert all(c["status"] == "stopped" for c in backend.connections)
+
+
+def test_counters_and_feed_are_cleared_when_starting_again(app):
+    backend, engines = make_backend(app)
+    backend.start()
+    counters = Counters()
+    counters.sent = {"twitch": 3}
+    counters.waiting = {"twitch": 2}
+    engines[0].listener.on_counters(counters)
+    engines[0].listener.on_message_sent("twitch", "hello")
+    pump(app, lambda: backend.sentCount == 3 and backend.feed.rowCount() == 1)
+    backend.stop()
+    pump(app, lambda: not backend.running)
+    assert backend.waitingCount == 2  # the last numbers stay visible after Stop
+
+    backend.start()
+    assert backend.sentCount == 0
+    assert backend.waitingCount == 0
+    assert backend.feed.rowCount() == 0

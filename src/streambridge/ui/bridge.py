@@ -153,6 +153,7 @@ class Backend(QObject):
             return
         self._engine = engine
         self._feed.clear()
+        self._reset_counters()
         for card in self._connections:
             card["status"] = str(ConnectionStatus.CONNECTING)
             card["detail"] = ""
@@ -221,6 +222,11 @@ class Backend(QObject):
         self._set_running(False)
 
     # --- Small helpers ------------------------------------------------------
+
+    def _reset_counters(self) -> None:
+        """Show zeros again, so numbers from the previous run do not linger."""
+        self._sent = self._filtered = self._dropped = self._rejected = self._waiting = 0
+        self.countersChanged.emit()
 
     def _set_running(self, value: bool) -> None:
         if self._running != value:
