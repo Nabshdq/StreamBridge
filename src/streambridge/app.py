@@ -110,4 +110,8 @@ def run(argv: Sequence[str] | None = None) -> int:
     engine.load(QUrl.fromLocalFile(str(QML_DIR / "Main.qml")))
     if not engine.rootObjects():
         return 1
-    return app.exec()
+    exit_code = app.exec()
+    # Destroy the QML engine first. Otherwise Python frees ``backend`` while the
+    # screens still read it, and QML prints "Cannot read property ... of null".
+    del context, engine
+    return exit_code
