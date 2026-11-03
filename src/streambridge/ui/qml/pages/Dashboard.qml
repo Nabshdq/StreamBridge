@@ -27,7 +27,7 @@ Item {
 
             Text {
                 Layout.fillWidth: true
-                text: qsTr("Dashboard")
+                text: i18n.strings["ui.dashboard.title"]
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.titleSize
                 font.weight: Theme.weightSemiBold
@@ -35,7 +35,7 @@ Item {
             }
 
             PrimaryButton {
-                text: root.bridge.running ? qsTr("Stop") : qsTr("Start")
+                text: root.bridge.running ? i18n.strings["ui.stop"] : i18n.strings["ui.start"]
                 iconName: root.bridge.running ? "square" : "play"
                 accented: !root.bridge.running
                 enabled: !root.bridge.stopping
@@ -89,10 +89,10 @@ Item {
 
         Row {
             spacing: Theme.space6
-            Counter { label: qsTr("Sent"); value: root.bridge.sentCount }
-            Counter { label: qsTr("Waiting"); value: root.bridge.waitingCount }
-            Counter { label: qsTr("Filtered"); value: root.bridge.filteredCount }
-            Counter { label: qsTr("Dropped"); value: root.bridge.droppedCount }
+            Counter { label: i18n.strings["ui.counter.sent"]; value: root.bridge.sentCount }
+            Counter { label: i18n.strings["ui.counter.waiting"]; value: root.bridge.waitingCount }
+            Counter { label: i18n.strings["ui.counter.filtered"]; value: root.bridge.filteredCount }
+            Counter { label: i18n.strings["ui.counter.dropped"]; value: root.bridge.droppedCount }
         }
 
         Rectangle {
@@ -128,8 +128,8 @@ Item {
                     anchors.centerIn: parent
                     visible: feed.count === 0
                     text: root.bridge.running
-                          ? qsTr("Waiting for the first message...")
-                          : qsTr("Press Start to begin relaying.")
+                          ? i18n.strings["ui.feed.empty_running"]
+                          : i18n.strings["ui.feed.empty_idle"]
                     font.family: Theme.fontFamily
                     font.pixelSize: Theme.bodySize
                     color: Theme.textSecondary

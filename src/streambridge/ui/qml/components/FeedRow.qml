@@ -61,7 +61,7 @@ Item {
                     color: Theme.attention
                 }
                 Text {
-                    text: qsTr("Not sent: %1").arg(root.reasonText)
+                    text: i18n.strings["ui.feed.not_sent"].replace("%1", () => root.reasonText)
                     font.family: Theme.fontFamily
                     font.pixelSize: Theme.labelSize
                     color: Theme.attention

@@ -23,6 +23,8 @@ from streambridge.core.secrets import KeyringStore
 from streambridge.destinations.console import ConsoleDestination
 from streambridge.ui.bridge import SOURCE_ID, Backend, EngineFactory
 from streambridge.ui.icons import IconProvider
+from streambridge.ui.settings_bridge import SettingsBridge
+from streambridge.ui.translator import UiTranslator
 
 QML_DIR = Path(__file__).resolve().parent / "ui" / "qml"
 FAKE_CONNECTIONS = (SOURCE_ID, "twitch-sim", "youtube-sim")
@@ -102,10 +104,14 @@ def run(argv: Sequence[str] | None = None) -> int:
         backend = Backend(real_engine_factory(), ids)
     app.aboutToQuit.connect(backend.shutdown)
 
+    translator = UiTranslator()
+    settings = SettingsBridge(translator)  # also applies the saved screen language
     engine = QQmlApplicationEngine()
     engine.addImportPath(str(QML_DIR))
     context = engine.rootContext()
     context.setContextProperty("backend", backend)
+    context.setContextProperty("i18n", translator)
+    context.setContextProperty("settings", settings)
     engine.addImageProvider("icons", IconProvider(paths.resources_dir() / "icons"))
     engine.load(QUrl.fromLocalFile(str(QML_DIR / "Main.qml")))
     if not engine.rootObjects():
@@ -113,5 +119,5 @@ def run(argv: Sequence[str] | None = None) -> int:
     exit_code = app.exec()
     # Destroy the QML engine first. Otherwise Python frees ``backend`` while the
     # screens still read it, and QML prints "Cannot read property ... of null".
-    del context, engine
+    del context, engine, settings, translator
     return exit_code

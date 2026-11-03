@@ -21,6 +21,8 @@ from streambridge.app import QML_DIR, register_fonts  # noqa: E402
 from streambridge.core import paths  # noqa: E402
 from streambridge.ui.bridge import Backend  # noqa: E402
 from streambridge.ui.icons import IconProvider  # noqa: E402
+from streambridge.ui.settings_bridge import SettingsBridge  # noqa: E402
+from streambridge.ui.translator import UiTranslator  # noqa: E402
 
 
 class FakeEngine:
@@ -34,7 +36,7 @@ class FakeEngine:
         self.listener.on_stopped()
 
 
-def test_main_window_loads_and_follows_the_backend():
+def test_main_window_loads_and_follows_the_backend(tmp_path):
     QQuickStyle.setStyle("Basic")
     app = QGuiApplication.instance() or QGuiApplication([])
     register_fonts()
@@ -48,7 +50,11 @@ def test_main_window_loads_and_follows_the_backend():
         backend = Backend(FakeEngine, ("source", "twitch"))
         engine = QQmlApplicationEngine()
         context = engine.rootContext()
+        translator = UiTranslator("en")
+        settings = SettingsBridge(translator, tmp_path / "config.json")
         context.setContextProperty("backend", backend)
+        context.setContextProperty("i18n", translator)
+        context.setContextProperty("settings", settings)
         engine.addImageProvider("icons", IconProvider(paths.resources_dir() / "icons"))
         engine.load(QUrl.fromLocalFile(str(QML_DIR / "Main.qml")))
         assert engine.rootObjects(), problems
@@ -65,7 +71,29 @@ def test_main_window_loads_and_follows_the_backend():
             app.processEvents()
             time.sleep(0.01)
         engine.rootObjects()[0].grabWindow()
+
+        # Switching the language re-evaluates every text without a restart.
+        root = engine.rootObjects()[0]
+        assert _texts(root).count("Dashboard") >= 1
+        settings.setUiLanguage("id")
+        for _ in range(10):
+            app.processEvents()
+        assert "Dasbor" in _texts(root)
+        assert "Dashboard" not in _texts(root)
     finally:
         qInstallMessageHandler(None)
 
     assert not problems, "\n".join(problems)
+
+
+def _texts(root) -> list[str]:
+    """All visible ``text`` values of Text items below ``root``."""
+    found: list[str] = []
+    stack = [root.contentItem()]
+    while stack:
+        item = stack.pop()
+        text = item.property("text")
+        if isinstance(text, str) and item.isVisible():
+            found.append(text)
+        stack.extend(item.childItems())
+    return found

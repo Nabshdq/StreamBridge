@@ -45,9 +45,9 @@ ApplicationWindow {
 
                 Repeater {
                     model: [
-                        { label: qsTr("Dashboard"), icon: "layout-dashboard" },
-                        { label: qsTr("Settings"), icon: "settings" },
-                        { label: qsTr("About"), icon: "info" }
+                        { label: i18n.strings["ui.nav.dashboard"], icon: "layout-dashboard" },
+                        { label: i18n.strings["ui.nav.settings"], icon: "settings" },
+                        { label: i18n.strings["ui.nav.about"], icon: "info" }
                     ]
                     delegate: ItemDelegate {
                         id: item
@@ -96,8 +96,8 @@ ApplicationWindow {
             Dashboard { bridge: backend }
 
             // Settings and About are filled in during Phase 6.
-            Placeholder { title: qsTr("Settings") }
-            Placeholder { title: qsTr("About") }
+            Placeholder { title: i18n.strings["ui.nav.settings"] }
+            Placeholder { title: i18n.strings["ui.nav.about"] }
         }
     }
 
@@ -106,7 +106,7 @@ ApplicationWindow {
         property string title: ""
         Text {
             anchors.centerIn: parent
-            text: qsTr("%1 is coming soon.").arg(placeholder.title)
+            text: i18n.strings["ui.coming_soon"].replace("%1", () => placeholder.title)
             font.family: Theme.fontFamily
             font.pixelSize: Theme.bodySize
             color: Theme.textSecondary

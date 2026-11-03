@@ -11,12 +11,12 @@ Rectangle {
     property string detail: ""
 
     readonly property var look: ({
-        "connected":    { icon: "circle-check",   label: qsTr("Connected") },
-        "connecting":   { icon: "loader",         label: qsTr("Connecting") },
-        "waiting_live": { icon: "clock",          label: qsTr("Waiting for LIVE") },
-        "disconnected": { icon: "triangle-alert", label: qsTr("Disconnected") },
-        "error":        { icon: "circle-x",       label: qsTr("Problem") },
-        "stopped":      { icon: "square",         label: qsTr("Stopped") }
+        "connected":    { icon: "circle-check",   label: i18n.strings["ui.status.connected"] },
+        "connecting":   { icon: "loader",         label: i18n.strings["ui.status.connecting"] },
+        "waiting_live": { icon: "clock",          label: i18n.strings["ui.status.waiting_live"] },
+        "disconnected": { icon: "triangle-alert", label: i18n.strings["ui.status.disconnected"] },
+        "error":        { icon: "circle-x",       label: i18n.strings["ui.status.error"] },
+        "stopped":      { icon: "square",         label: i18n.strings["ui.status.stopped"] }
     })
     readonly property var current: look[status] || look["stopped"]
     readonly property bool needsAttention: status === "error" || status === "disconnected"
