@@ -55,12 +55,22 @@ def test_save_and_load_round_trip(tmp_home: Path) -> None:
     config = AppConfig()
     config.relay_language = "id"
     config.tiktok.username = "budi_live"
+    config.setup_complete = True
     config.twitch.enabled = True
     config.twitch.events.like = False
     config.youtube.templates = {"chat": "{user}: {message}"}
     config.filters.extra_rude_words = ["kampret"]
     save_config(config)
     assert load_config() == config
+
+
+def test_first_run_flag_defaults_to_false_and_survives_a_reload(tmp_home: Path) -> None:
+    """The wizard shows until it is finished, and then stays away."""
+    assert load_config().setup_complete is False
+    config = AppConfig(setup_complete=True)
+    save_config(config)
+    assert load_config().setup_complete is True
+    assert AppConfig.from_dict({"setup_complete": "yes"}).setup_complete is False
 
 
 def test_saved_file_is_readable_json(tmp_home: Path) -> None:

@@ -219,6 +219,12 @@ class SettingsBridge(QObject):
         self.changed.emit()
 
     @Slot()
+    def markSetupComplete(self) -> None:
+        """Remember that the first-run wizard was finished."""
+        self._config.setup_complete = True
+        self._save()
+
+    @Slot()
     def openLogFolder(self) -> None:
         """Open the folder with the log files in File Explorer."""
         folder = paths.log_dir()

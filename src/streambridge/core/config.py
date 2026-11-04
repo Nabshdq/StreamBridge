@@ -103,6 +103,7 @@ class AppConfig:
     ui_language: str = AUTO_LANGUAGE
     relay_language: str = AUTO_LANGUAGE
     gift_delay: float = DEFAULT_GIFT_DELAY
+    setup_complete: bool = False  # True once the first-run wizard was finished
     tiktok: TikTokSettings = field(default_factory=TikTokSettings)
     filters: FilterSettings = field(default_factory=FilterSettings)
     twitch: TwitchSettings = field(default_factory=TwitchSettings)
@@ -122,6 +123,7 @@ class AppConfig:
             ui_language=_language(data, "ui_language"),
             relay_language=_language(data, "relay_language"),
             gift_delay=_number(data, "gift_delay", default.gift_delay),
+            setup_complete=_bool(data, "setup_complete", False),
             tiktok=TikTokSettings(username=_text(_section(data, "tiktok"), "username", "")),
             filters=_filters_from(_section(data, "filters")),
             twitch=_twitch_from(_section(data, "twitch")),
