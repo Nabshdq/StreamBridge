@@ -98,10 +98,10 @@ Item {
         Flow {
             Layout.fillWidth: true
             spacing: Theme.space2
-            Counter { label: i18n.strings["ui.counter.sent"]; value: root.bridge.sentCount }
-            Counter { label: i18n.strings["ui.counter.waiting"]; value: root.bridge.waitingCount }
-            Counter { label: i18n.strings["ui.counter.filtered"]; value: root.bridge.filteredCount }
-            Counter { label: i18n.strings["ui.counter.dropped"]; value: root.bridge.droppedCount }
+            Counter { label: i18n.strings["ui.counter.sent"]; valueText: root.groupDigits(root.bridge.sentCount) }
+            Counter { label: i18n.strings["ui.counter.waiting"]; valueText: root.groupDigits(root.bridge.waitingCount) }
+            Counter { label: i18n.strings["ui.counter.filtered"]; valueText: root.groupDigits(root.bridge.filteredCount) }
+            Counter { label: i18n.strings["ui.counter.dropped"]; valueText: root.groupDigits(root.bridge.droppedCount) }
             // Only while YouTube is in use and the engine has reported its quota.
             Counter {
                 visible: root.bridge.quotaBudget > 0
