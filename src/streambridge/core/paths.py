@@ -42,6 +42,11 @@ def config_file() -> Path:
     return config_dir() / CONFIG_FILE_NAME
 
 
+def quota_file() -> Path:
+    """Small state file with the YouTube quota used today (never holds secrets)."""
+    return config_dir() / "youtube_quota.json"
+
+
 def log_dir() -> Path:
     """Folder for log files (stays on this PC)."""
     override = _home_override()
