@@ -17,7 +17,7 @@ MAX_WINDOW = 120.0
 OVERRUN_HORIZON = 1800.0
 """When the LIVE runs past its target, keep pacing over this many seconds."""
 
-DEFAULT_RESERVE = int(DAILY_BUDGET * (1 - GIFTS_ONLY_FRACTION)) // COST_INSERT
+DEFAULT_RESERVE = round(DAILY_BUDGET * (1 - GIFTS_ONLY_FRACTION)) // COST_INSERT
 """Sends kept for gifts: what is left when the 90% gifts-only switch starts."""
 
 
