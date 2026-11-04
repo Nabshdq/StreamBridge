@@ -17,6 +17,8 @@
   "ui.counter.waiting": "Menunggu",
   "ui.counter.filtered": "Disaring",
   "ui.counter.dropped": "Dibuang",
+  "ui.counter.youtube_quota": "Kuota YouTube",
+  "ui.number.group_separator": ".",
   "ui.feed.empty_running": "Menunggu pesan pertama...",
   "ui.feed.empty_idle": "Tekan Mulai untuk mulai meneruskan pesan.",
   "ui.feed.not_sent": "Tidak terkirim: %1",

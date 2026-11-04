@@ -16,6 +16,13 @@ Item {
         return id.charAt(0).toUpperCase() + id.slice(1)
     }
 
+    // 2340 -> "2,340" (English) or "2.340" (Indonesian): the separator is a
+    // translated text, so it follows the app language, not the Windows locale.
+    function groupDigits(number) {
+        const separator = i18n.strings["ui.number.group_separator"]
+        return String(number).replace(/\B(?=(\d{3})+(?!\d))/g, separator)
+    }
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: Theme.space4
@@ -87,12 +94,21 @@ Item {
             }
         }
 
-        Row {
+        // A Flow, so the counters wrap onto a second line on a narrow window.
+        Flow {
+            Layout.fillWidth: true
             spacing: Theme.space6
             Counter { label: i18n.strings["ui.counter.sent"]; value: root.bridge.sentCount }
             Counter { label: i18n.strings["ui.counter.waiting"]; value: root.bridge.waitingCount }
             Counter { label: i18n.strings["ui.counter.filtered"]; value: root.bridge.filteredCount }
             Counter { label: i18n.strings["ui.counter.dropped"]; value: root.bridge.droppedCount }
+            // Only while YouTube is in use and the engine has reported its quota.
+            Counter {
+                visible: root.bridge.quotaBudget > 0
+                label: i18n.strings["ui.counter.youtube_quota"]
+                valueText: root.groupDigits(root.bridge.quotaUsed)
+                           + " / " + root.groupDigits(root.bridge.quotaBudget)
+            }
         }
 
         Rectangle {

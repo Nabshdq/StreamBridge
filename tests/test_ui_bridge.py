@@ -257,3 +257,62 @@ def test_cards_can_be_changed_while_stopped_but_not_while_running(app):
     backend.start()
     backend.set_connection_ids((SOURCE_ID,))
     assert [c["id"] for c in backend.connections] == [SOURCE_ID, "youtube"]
+
+
+def _youtube_counters(used: int = 240, budget: int = 10_000) -> Counters:
+    counters = Counters()
+    counters.quota_used = {"youtube": used}
+    counters.quota_budget = budget
+    return counters
+
+
+def test_quota_is_hidden_until_the_engine_reports_it(app):
+    backend, _ = make_backend(app)
+    assert backend.quotaBudget == 0  # the dashboard hides the counter at 0
+    assert backend.quotaUsed == 0
+
+
+def test_quota_shows_the_reported_numbers(app):
+    backend, engines = make_backend(app)
+    backend.start()
+    engines[0].listener.on_counters(_youtube_counters(240, 10_000))
+    pump(app, lambda: backend.quotaBudget == 10_000)
+    assert backend.quotaUsed == 240
+    assert backend.quotaBudget == 10_000
+
+
+def test_quota_is_not_summed_when_two_routes_report_it(app):
+    backend, engines = make_backend(app)
+    backend.start()
+    counters = _youtube_counters(240, 10_000)
+    counters.quota_used = {"youtube": 240, "youtube-sim": 240}  # one shared tracker
+    engines[0].listener.on_counters(counters)
+    pump(app, lambda: backend.quotaBudget == 10_000)
+    assert backend.quotaUsed == 240
+
+
+def test_quota_stays_when_the_relay_is_restarted(app):
+    backend, engines = make_backend(app)
+    backend.start()
+    engines[0].listener.on_counters(_youtube_counters())
+    pump(app, lambda: backend.quotaBudget == 10_000)
+    backend.stop()
+    pump(app, lambda: not backend.running)
+
+    backend.start()  # the per-session reset must not wipe a daily count
+    assert backend.quotaUsed == 240
+    assert backend.quotaBudget == 10_000
+
+
+def test_quota_is_forgotten_when_youtube_is_removed(app):
+    backend, engines = make_backend(app)
+    backend.set_connection_ids((SOURCE_ID, "youtube"))
+    backend.start()
+    engines[0].listener.on_counters(_youtube_counters())
+    pump(app, lambda: backend.quotaBudget == 10_000)
+    backend.stop()
+    pump(app, lambda: not backend.running)
+
+    backend.set_connection_ids((SOURCE_ID, "twitch"))
+    assert backend.quotaBudget == 0
+    assert backend.quotaUsed == 0

@@ -101,6 +101,7 @@ class Backend(QObject):
             for cid in connection_ids
         ]
         self._sent = self._filtered = self._dropped = self._rejected = self._waiting = 0
+        self._quota_used = self._quota_budget = 0  # a daily count: not reset per session
 
         self._status_in.connect(self._on_status)
         self._message_in.connect(self._on_message)
@@ -133,6 +134,9 @@ class Backend(QObject):
     droppedCount = Property(int, lambda self: self._dropped, notify=countersChanged)
     rejectedCount = Property(int, lambda self: self._rejected, notify=countersChanged)
     waitingCount = Property(int, lambda self: self._waiting, notify=countersChanged)
+    # quotaBudget is 0 until the engine reports a quota; the dashboard hides the counter then.
+    quotaUsed = Property(int, lambda self: self._quota_used, notify=countersChanged)
+    quotaBudget = Property(int, lambda self: self._quota_budget, notify=countersChanged)
 
     def set_connection_ids(self, connection_ids: Sequence[str]) -> None:
         """Change which status cards are shown. Ignored while the relay is running."""
@@ -145,6 +149,9 @@ class Backend(QObject):
             {"id": cid, "status": str(ConnectionStatus.STOPPED), "detail": ""} for cid in wanted
         ]
         self.connectionsChanged.emit()
+        if not any(cid.startswith("youtube") for cid in wanted) and self._quota_budget:
+            self._quota_used = self._quota_budget = 0  # YouTube was removed: forget its quota
+            self.countersChanged.emit()
 
     # --- Commands from QML --------------------------------------------------
 
@@ -217,7 +224,21 @@ class Backend(QObject):
         self._dropped = sum(counters.dropped.values())
         self._rejected = sum(counters.rejected.values())
         self._waiting = sum(counters.waiting.values())
+        self._quota_used, self._quota_budget = self._read_quota(counters)
         self.countersChanged.emit()
+
+    @staticmethod
+    def _read_quota(counters: Counters) -> tuple[int, int]:
+        """Return ``(used, budget)`` of the daily quota to show; ``(0, 0)`` means none.
+
+        ``counters.quota_used`` is ``{destination: units}`` and ``counters.quota_budget``
+        is one number. All YouTube routes share ONE tracker, so adding the values up
+        would count the same units twice.
+        """
+        budget = counters.quota_budget
+        if budget <= 0 or not counters.quota_used:
+            return 0, 0
+        return max(counters.quota_used.values()), budget  # max, not sum: one shared tracker
 
     @Slot()
     def _on_stopped(self) -> None:
