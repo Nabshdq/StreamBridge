@@ -8,7 +8,11 @@ and takes about 15 minutes. You create your own small "project", so the daily
 YouTube limit belongs to you and is not shared with other people.
 
 > The in-app setup wizard for these steps is not built yet. Until it is, use
-> this guide as the reference for what the wizard will ask.
+> this guide as the reference for what the wizard will ask. Google renames
+> console pages from time to time (the consent screen now lives under
+> **Google Auth Platform**: Branding, Audience, Data Access, Clients), so
+> button names may differ slightly. These steps have not been tested end to
+> end yet.
 
 ## 0. Enable live streaming on your channel first
 
@@ -31,8 +35,10 @@ streaming restriction from the last 90 days. Do this before anything else:
 
 ## 3. Set up the consent screen
 
-1. Open **APIs & Services > OAuth consent screen**.
-2. Choose **External** and click **Create**.
+1. Open **Google Auth Platform** (<https://console.cloud.google.com/auth/overview>)
+   and start the setup. The older name is **APIs & Services > OAuth consent
+   screen**.
+2. Choose the user type **External**.
 3. Fill in the app name (`StreamBridge`), your email as support email and as
    developer contact. Leave the rest empty. Save.
 4. On the **Scopes** step, add `.../auth/youtube.force-ssl`.
@@ -43,14 +49,17 @@ streaming restriction from the last 90 days. Do this before anything else:
 
 When you log in, Google may say **"Google hasn't verified this app"**. That is
 expected: you built the app yourself and you are its only user. Click
-**Advanced**, then **Go to StreamBridge (unsafe)**.
+**Advanced**, then **Go to StreamBridge (unsafe)**. Google may keep showing
+this warning because the app is not verified; that is fine for personal use
+(an unverified app is limited to 100 users).
 
 ## 4. Create the login file
 
-1. Open **APIs & Services > Credentials**.
-2. Click **Create credentials > OAuth client ID**.
+1. Open **Google Auth Platform > Clients** (older name: **APIs & Services >
+   Credentials**).
+2. Click **Create client**.
 3. Application type: **Desktop app**. Name: `StreamBridge`. Click **Create**.
-4. Click **Download JSON**. The file is called `client_secret_....json`.
+4. Download the JSON right away; the secret is shown only once. The file is called `client_secret_....json`.
 5. Give this file to StreamBridge when it asks. StreamBridge copies it into
    its own folder. **Never share this file and never upload it anywhere.**
 
@@ -70,10 +79,12 @@ To stay inside this, StreamBridge:
 - joins several chat messages into **one** message (compact mode) and sends
   only the newest chat that fits in 200 characters;
 - by default sends chat and gifts to YouTube, but not follows, likes or shares;
-- shows "YouTube quota: used / 10,000" and, above 90%, sends only gifts.
+- (planned) shows "YouTube quota: used / 10,000" and, above 90%, sends only
+  gifts.
 
-A 2 to 3 hour LIVE fits comfortably. The chat that does not fit is counted as
-"dropped" on the dashboard.
+With 500 messages a day, a 2 to 3 hour LIVE only fits if chat is batched into
+longer windows; StreamBridge is being tuned for this. The chat that does not
+fit is counted as "dropped".
 
 ## Using a separate bot account (advanced)
 
