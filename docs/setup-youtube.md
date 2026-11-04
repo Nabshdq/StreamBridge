@@ -81,11 +81,15 @@ To stay inside this, StreamBridge:
 - by default sends chat and gifts to YouTube, but not follows, likes or shares;
 - counts the quota it uses and, above 90%, pauses chat and sends only gifts and
   follows until the quota resets (built and tested with mocks only, not yet on
-  a real LIVE; the dashboard quota display is still planned).
+  a real LIVE). The dashboard shows the quota ("YouTube quota") and a notice
+  appears once when that switch happens.
 
 With 500 messages a day, a 2 to 3 hour LIVE only fits if chat is batched into
 longer windows; StreamBridge widens or narrows the batching window to match
-the quota that is left. The chat that does not fit is counted as "dropped".
+the quota that is left. It plans for a 3 hour LIVE; if yours is usually shorter
+or longer, set **How long your LIVE usually lasts (hours)** in Settings
+(0.5 to 12, applied from the next Start). The chat that does not fit is counted
+as "dropped".
 
 ## Using a separate bot account (advanced)
 

@@ -84,12 +84,15 @@ Agar cukup, StreamBridge:
   atau share;
 - menghitung kuota yang terpakai dan, di atas 90%, menjeda chat lalu hanya
   mengirim gift dan follow sampai kuota di-reset (sudah dibuat dan diuji dengan
-  tiruan saja, belum di LIVE sungguhan; tampilan kuota di dashboard masih
-  rencana).
+  tiruan saja, belum di LIVE sungguhan). Dasbor menampilkan kuota ("Kuota
+  YouTube") dan satu pemberitahuan muncul saat peralihan itu terjadi.
 
 Dengan 500 pesan sehari, LIVE 2 sampai 3 jam hanya cukup jika chat digabung
 dalam jendela waktu yang lebih panjang; StreamBridge menyesuaikan lebar jendela
-dengan sisa kuota. Chat yang tidak muat dihitung sebagai "dropped".
+dengan sisa kuota. Rencana bawaannya LIVE 3 jam; jika LIVE Anda biasanya lebih
+pendek atau lebih panjang, isi **Biasanya LIVE Anda berlangsung berapa lama
+(jam)** di Pengaturan (0,5 sampai 12, berlaku saat Anda menekan Mulai lagi). Chat yang
+tidak muat dihitung sebagai "dropped".
 
 ## Memakai akun bot terpisah (lanjutan)
 
