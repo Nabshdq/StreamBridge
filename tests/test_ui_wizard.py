@@ -41,7 +41,12 @@ def test_steps_depend_on_the_chosen_destinations() -> None:
     assert wizard_steps(True, False) == ["welcome", "tiktok", "destinations", "twitch", "done"]
     assert wizard_steps(False, True) == ["welcome", "tiktok", "destinations", "youtube", "done"]
     assert wizard_steps(True, True) == [
-        "welcome", "tiktok", "destinations", "twitch", "youtube", "done"
+        "welcome",
+        "tiktok",
+        "destinations",
+        "twitch",
+        "youtube",
+        "done",
     ]
 
 

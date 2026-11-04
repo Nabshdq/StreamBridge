@@ -34,8 +34,11 @@ FAKE_CONNECTIONS = (SOURCE_ID, "twitch-sim", "youtube-sim")
 def connection_ids(config: AppConfig) -> list[str]:
     """Ids of the status cards to show: TikTok plus every enabled destination."""
     ids = [SOURCE_ID]
-    ids += [name for name, part in (("twitch", config.twitch), ("youtube", config.youtube))
-            if part.enabled]
+    ids += [
+        name
+        for name, part in (("twitch", config.twitch), ("youtube", config.youtube))
+        if part.enabled
+    ]
     return ids
 
 

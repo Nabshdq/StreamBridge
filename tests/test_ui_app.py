@@ -45,6 +45,7 @@ def test_main_window_loads_and_follows_the_backend(tmp_path):
     app = QGuiApplication.instance() or QGuiApplication([])
     register_fonts()
     problems: list[str] = []
+
     def collect(mode, ctx, message):
         if "QFontDatabase" not in message:  # Qt has no system fonts when run offscreen
             problems.append(message)

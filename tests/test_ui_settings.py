@@ -78,8 +78,15 @@ def test_auto_language_follows_windows(tmp_path: Path, monkeypatch: pytest.Monke
 
 @pytest.mark.parametrize(
     "typed,expected",
-    [(0, 1.0), (-5, 1.0), (9999, 30.0), (7.5, 7.5), (float("nan"), 5.0),
-     (float("inf"), 5.0), (float("-inf"), 5.0)],
+    [
+        (0, 1.0),
+        (-5, 1.0),
+        (9999, 30.0),
+        (7.5, 7.5),
+        (float("nan"), 5.0),
+        (float("inf"), 5.0),
+        (float("-inf"), 5.0),
+    ],
 )
 def test_gift_delay_is_kept_in_a_safe_range(typed: float, expected: float, tmp_path: Path) -> None:
     bridge, _, path = make(tmp_path)
