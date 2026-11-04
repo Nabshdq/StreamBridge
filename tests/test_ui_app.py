@@ -16,6 +16,7 @@ from PySide6.QtGui import QGuiApplication  # noqa: E402
 from PySide6.QtQml import QQmlApplicationEngine  # noqa: E402
 from PySide6.QtQuick import QQuickWindow  # noqa: E402,F401  (makes grabWindow available)
 from PySide6.QtQuickControls2 import QQuickStyle  # noqa: E402
+from PySide6.QtTest import QTest  # noqa: E402
 
 from streambridge.app import QML_DIR, register_fonts  # noqa: E402
 from streambridge.core import paths  # noqa: E402
@@ -173,8 +174,17 @@ def test_wizard_shows_on_first_run_and_follows_the_chosen_destinations(tmp_path)
         assert "Step 1 of 4" in _texts(root)
         assert "Close" not in _texts(root)  # the first run cannot be closed
 
+        # Typing alone (no Enter, no leaving the box) must be enough for Next to work.
         wizard.next()
-        wizard.setUsernameDraft("budi_live")
+        settle(root)
+        assert not wizard.canGoNext
+        field = _find_by_placeholder(root, "username")
+        field.forceActiveFocus()
+        for letter in "budi_live":
+            QTest.keyClick(root, letter)
+        settle(root)
+        assert wizard.usernameDraft == "budi_live"
+        assert wizard.canGoNext
         wizard.next()
         settle(root)
         assert "Where should the messages go?" in _texts(root)
@@ -192,11 +202,22 @@ def test_wizard_shows_on_first_run_and_follows_the_chosen_destinations(tmp_path)
         settle(root)
         assert "TikTok LIVE to read: @budi_live" in _texts(root)
         assert "Destinations: YouTube" in _texts(root)
+        assert "The setup is finished" in _texts(root)
         wizard.finish()
         settle(root)
-        assert "Welcome to StreamBridge" not in _texts(root)
-        assert "Dashboard" in _texts(root)
+        assert "The setup is finished" not in _texts(root)  # the wizard really closed
     finally:
         qInstallMessageHandler(None)
 
     assert not problems, "\n".join(problems)
+
+
+def _find_by_placeholder(root, placeholder: str):
+    """The visible text box whose grey hint text is ``placeholder``."""
+    stack = [root.contentItem()]
+    while stack:
+        item = stack.pop()
+        if item.isVisible() and item.property("placeholderText") == placeholder:
+            return item
+        stack.extend(item.childItems())
+    raise AssertionError(f"no visible text box with the hint {placeholder!r}")
