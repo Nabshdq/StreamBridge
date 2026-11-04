@@ -29,9 +29,10 @@ class RateRule:
 # Twitch: broadcaster or moderator sender (a separate bot must be a moderator).
 TWITCH_RULES: tuple[RateRule, ...] = (RateRule(80, 30.0),)
 
-# YouTube: no published per-message limit; stay gentle. Quota is the real limit
-# (checked in Phase 4).
-YOUTUBE_RULES: tuple[RateRule, ...] = (RateRule(1, 2.0),)
+# YouTube: the API send rate is not documented. The Help Center allows chat users
+# 11 messages per 30 s, so we stay at that. The daily quota (core/quota.py) is the
+# stricter limit in practice.
+YOUTUBE_RULES: tuple[RateRule, ...] = (RateRule(11, 30.0),)
 
 
 class RateLimiter:

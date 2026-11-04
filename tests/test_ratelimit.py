@@ -87,3 +87,10 @@ async def test_acquire_waits_for_a_free_slot() -> None:
     await limiter.acquire()
     await limiter.acquire()
     assert loop.time() - start >= 0.04
+
+
+def test_youtube_rules_stay_within_help_center_limit():
+    """YouTube must never exceed 11 messages in any 30 s window."""
+    from streambridge.core.ratelimit import YOUTUBE_RULES
+
+    assert (RateRule(11, 30.0),) == YOUTUBE_RULES
