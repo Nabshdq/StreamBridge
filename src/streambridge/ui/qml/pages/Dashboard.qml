@@ -26,7 +26,7 @@ Item {
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: Theme.space4
-        spacing: Theme.space3
+        spacing: Theme.space2
 
         RowLayout {
             Layout.fillWidth: true
@@ -114,13 +114,17 @@ Item {
             }
         }
 
-        Flow {
+        // One row: the cards share the width, up to their normal width on a wide window.
+        Row {
+            id: cards
             Layout.fillWidth: true
-            spacing: Theme.space2
+            spacing: Theme.space1
             Repeater {
                 model: root.bridge.connections
                 StatusCard {
                     required property var modelData
+                    width: Math.min(240, (cards.width - (root.bridge.connections.length - 1)
+                                          * cards.spacing) / Math.max(1, root.bridge.connections.length))
                     title: root.cardTitle(modelData.id)
                     status: modelData.status
                     detail: modelData.detail
