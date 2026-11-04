@@ -32,6 +32,7 @@ dependencies = [
     # YouTube. Pinned exactly: the Google libraries change often.
     "google-api-python-client==2.201.0",
     "google-auth-oauthlib==1.5.0",
+    "httplib2>=0.22",  # imported directly (network errors); also pulled in by the client
     # The desktop UI. Pinned exactly so the Qt runtime only changes on purpose.
     "PySide6==6.12.0",
 ]
