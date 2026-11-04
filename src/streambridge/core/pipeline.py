@@ -18,8 +18,13 @@ from streambridge.core.formatter import MessageFormatter, truncate
 from streambridge.core.gifts import GiftMerger
 from streambridge.core.likes import SocialDeduper
 from streambridge.core.outqueue import OutMessage, OutQueue
+from streambridge.core.pacing import compact_window
+from streambridge.core.quota import COST_INSERT, QuotaTracker
 
 logger = logging.getLogger(__name__)
+
+GIFTS_ONLY_KINDS = frozenset({"gift", "follow"})
+"""What is still sent once the daily quota is nearly used up."""
 
 
 @dataclass
@@ -33,6 +38,8 @@ class Counters:
         rejected: Messages refused by each destination (e.g. Twitch AutoMod).
         waiting: Messages waiting in each destination's queue.
         unsent_on_stop: Messages still waiting when the relay was stopped.
+        quota_used: Daily API quota units used, for destinations that have a quota.
+        quota_budget: The daily quota budget those units count against (0 = none).
     """
 
     sent: dict[str, int] = field(default_factory=dict)
@@ -41,6 +48,8 @@ class Counters:
     rejected: dict[str, int] = field(default_factory=dict)
     waiting: dict[str, int] = field(default_factory=dict)
     unsent_on_stop: int = 0
+    quota_used: dict[str, int] = field(default_factory=dict)
+    quota_budget: int = 0
 
     def add_destination(self, name: str) -> None:
         """Start counting for a destination."""
@@ -62,6 +71,9 @@ class Route:
         formatter: Formats single events for this destination.
         queue: The destination's outgoing queue.
         batcher: Compact-mode batcher for chat, or ``None``.
+        quota: Daily quota counter of the destination, or ``None``.
+        pace_target: Planned LIVE length in seconds; with a quota it sets how
+            long the compact window is. ``0`` switches pacing off.
     """
 
     name: str
@@ -69,9 +81,18 @@ class Route:
     formatter: MessageFormatter
     queue: OutQueue
     batcher: ChatBatcher | None = None
+    quota: QuotaTracker | None = None
+    pace_target: float = 0.0
+
+    @property
+    def gifts_only(self) -> bool:
+        """True while the daily quota is nearly used up (re-checked on every call)."""
+        return self.quota is not None and self.quota.gifts_only
 
     def wants(self, kind: str) -> bool:
         """True if this destination receives events of ``kind``."""
+        if self.gifts_only and kind not in GIFTS_ONLY_KINDS:
+            return False  # the user's toggles stay as saved; this only pauses them
         return self.toggles.get(kind, False)
 
 
@@ -92,6 +113,7 @@ class Pipeline:
         self.gift_merger = gift_merger
         self.routes = list(routes)
         self.counters = counters or Counters()
+        self._session_started: float | None = None
         for route in self.routes:
             self.counters.add_destination(route.name)
 
@@ -116,6 +138,7 @@ class Pipeline:
             self._route(gift, now)
         for route in self.routes:
             if route.batcher is not None:
+                self._pace(route, now)
                 for text in route.batcher.pop_due(now):
                     self.counters.dropped[route.name] += route.batcher.last_pop_dropped
                     self._deliver(route, OutMessage.for_kind(text, "chat"))
@@ -133,9 +156,25 @@ class Pipeline:
             for text in route.batcher.flush_all():
                 self._deliver(route, OutMessage.for_kind(text, "chat"))
 
-    def reset_session(self) -> None:
-        """Start a new session (the TikTok LIVE connected again)."""
+    def reset_session(self, now: float | None = None) -> None:
+        """Start a new session (the TikTok LIVE connected again).
+
+        ``now`` starts the pacing clock, so time spent waiting for the LIVE
+        does not count against the planned LIVE length.
+        """
         self.deduper.reset()
+        self._session_started = now
+
+    def _pace(self, route: Route, now: float) -> None:
+        """Adjust a compact route to its quota: drop chat when gifts-only, else set the window."""
+        batcher = route.batcher
+        if batcher is None or route.quota is None:
+            return
+        if route.gifts_only:
+            self.counters.dropped[route.name] += batcher.discard_all()
+        elif route.pace_target > 0 and self._session_started is not None:
+            seconds_left = route.pace_target - (now - self._session_started)
+            batcher.window = compact_window(route.quota.remaining // COST_INSERT, seconds_left)
 
     def enqueue_text(self, text: str) -> None:
         """Queue a plain text (e.g. a test message) for every destination, sent first."""

@@ -84,6 +84,14 @@ class ChatBatcher:
         self._batch_start = now if self._lines else None
         return [message]
 
+    def discard_all(self) -> int:
+        """Throw away all waiting chat. Returns how many lines were dropped."""
+        count = len(self._lines)
+        self._lines.clear()
+        self._batch_start = None
+        self.dropped_count += count
+        return count
+
     def flush_all(self) -> list[str]:
         """Return all waiting chat as joined messages (used on stop)."""
         messages = []

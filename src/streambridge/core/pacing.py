@@ -8,6 +8,9 @@ for the whole LIVE.
 
 from streambridge.core.quota import COST_INSERT, DAILY_BUDGET, GIFTS_ONLY_FRACTION
 
+DEFAULT_LIVE_TARGET = 3 * 3600.0
+"""Planned LIVE length in seconds (a setting comes with the Settings page)."""
+
 MIN_WINDOW = 20.0
 """Never batch faster than this many seconds (also protects the send limit)."""
 

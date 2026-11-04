@@ -78,3 +78,17 @@ def test_failed_youtube_start_leaves_the_other_destination_running(tmp_path) -> 
     wait_until(lambda: len(other.sent) == 1)
     engine.stop()
     assert ("youtube", ConnectionStatus.ERROR) in listener.statuses
+
+
+def test_engine_reports_the_quota_to_the_listener(tmp_path) -> None:
+    quota = QuotaTracker(tmp_path / "q.json")
+    quota.record(240)
+    destination = RecordingDestination(name="youtube")
+    destination.quota = quota
+    listener = RecordingListener()
+    engine = RelayEngine(ListSource([]), [setup_for(destination)], FAST, listener)
+    engine.start()
+    wait_until(lambda: listener.counters is not None and listener.counters.quota_budget > 0)
+    engine.stop()
+    assert listener.counters.quota_used == {"youtube": 240}
+    assert listener.counters.quota_budget == 10_000

@@ -179,3 +179,72 @@ def test_compact_overflow_is_counted_as_dropped() -> None:
     pipeline.tick(now=10.0)
     assert pipeline.counters.dropped["youtube"] > 0
     assert len(youtube.batcher) == 0
+
+
+# --- quota: gifts-only switch and pacing -----------------------------------
+
+
+class FakeQuota:
+    """Stands in for QuotaTracker: only what the route reads."""
+
+    budget = 10_000
+
+    def __init__(self, used: int = 0) -> None:
+        self.used = used
+
+    @property
+    def remaining(self) -> int:
+        return self.budget - self.used
+
+    @property
+    def gifts_only(self) -> bool:
+        return self.used >= 0.9 * self.budget
+
+
+def quota_pipeline(quota: FakeQuota, pace_target: float = 0.0) -> tuple[Pipeline, Route]:
+    route = make_route("youtube", compact=True)
+    route.quota = quota
+    route.pace_target = pace_target
+    return make_pipeline(route), route
+
+
+def chat(text: str = "hi") -> RelayEvent:
+    return event("chat", text=text)
+
+
+def test_gifts_only_pauses_chat_without_touching_saved_toggles() -> None:
+    quota = FakeQuota(used=9_100)
+    pipeline, route = quota_pipeline(quota)
+    pipeline.handle(chat(), 0.0)
+    assert len(route.batcher) == 0
+    assert route.toggles["chat"] is True  # the user's setting is unchanged
+    quota.used = 0  # the Pacific midnight reset
+    pipeline.handle(chat("again"), 1.0)
+    assert len(route.batcher) == 1
+
+
+def test_gifts_only_drops_chat_that_was_already_waiting() -> None:
+    quota = FakeQuota()
+    pipeline, route = quota_pipeline(quota)
+    pipeline.handle(chat("a"), 0.0)
+    pipeline.handle(chat("b"), 0.0)
+    quota.used = 9_000
+    pipeline.tick(1.0)
+    assert len(route.batcher) == 0
+    assert pipeline.counters.dropped["youtube"] == 2
+
+
+def test_gifts_are_still_sent_when_gifts_only() -> None:
+    pipeline, route = quota_pipeline(FakeQuota(used=9_500))
+    pipeline.handle(event("gift", gift_name="Rose"), 0.0)
+    pipeline.tick(10.0)  # the gift merge window (5 s) has ended
+    assert len(texts(route)) == 1
+
+
+def test_window_follows_the_remaining_quota_after_the_session_starts() -> None:
+    pipeline, route = quota_pipeline(FakeQuota(), pace_target=10_800.0)
+    pipeline.tick(0.0)
+    assert route.batcher.window == 10.0  # no session yet: the default stays
+    pipeline.reset_session(0.0)
+    pipeline.tick(0.0)
+    assert round(route.batcher.window) == 24  # 10800 s over (500 - 50) sends

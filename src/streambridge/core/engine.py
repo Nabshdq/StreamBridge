@@ -32,6 +32,7 @@ from streambridge.core.gifts import DEFAULT_GIFT_DELAY, GiftMerger
 from streambridge.core.i18n import Translator
 from streambridge.core.likes import DEFAULT_SHARE_REPEAT_WINDOW, SocialDeduper
 from streambridge.core.outqueue import OutMessage, OutQueue
+from streambridge.core.pacing import DEFAULT_LIVE_TARGET
 from streambridge.core.pipeline import Counters, Pipeline, Route
 from streambridge.core.ratelimit import RateLimiter
 from streambridge.destinations.base import Destination, TemporarySendError
@@ -88,6 +89,7 @@ class EngineSettings:
     duplicate_window: float = DEFAULT_DUPLICATE_WINDOW
     share_repeat_window: float = DEFAULT_SHARE_REPEAT_WINDOW
     compact_window: float = DEFAULT_COMPACT_WINDOW
+    live_target: float = DEFAULT_LIVE_TARGET
     stop_grace: float = 5.0
     tick_interval: float = 0.25
     counters_interval: float = 1.0
@@ -310,6 +312,8 @@ class RelayEngine:
             formatter=self._make_formatter(destination, setup.templates, translator),
             queue=OutQueue(destination.max_queue_size),
             batcher=self._make_batcher(destination, translator) if setup.compact_mode else None,
+            quota=destination.quota,
+            pace_target=self._settings.live_target if destination.quota is not None else 0.0,
         )
         return _ActiveDestination(setup, route, RateLimiter(destination.rate_rules))
 
@@ -418,7 +422,7 @@ class RelayEngine:
     def _on_source_status(self, status: ConnectionStatus, detail: str) -> None:
         """Called by the source when its connection changes."""
         if status == ConnectionStatus.CONNECTED and self._pipeline is not None:
-            self._pipeline.reset_session()
+            self._pipeline.reset_session(time.time())
         self._notify(self._listener.on_source_status, status, detail)
 
     async def _ticker(self) -> None:
@@ -542,6 +546,10 @@ class RelayEngine:
         """Update waiting counts and send a copy of the counters to the listener."""
         for active in self._active:
             self.counters.waiting[active.name] = active.unsent_count
+            quota = active.route.quota
+            if quota is not None:
+                self.counters.quota_used[active.name] = quota.used
+                self.counters.quota_budget = quota.budget
         self._notify(self._listener.on_counters, self.counters.snapshot())
 
     @staticmethod
