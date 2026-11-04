@@ -62,3 +62,9 @@ def test_broken_translation_file_does_not_crash(tmp_path: Path) -> None:
     """An unreadable file gives an empty dict instead of an exception."""
     (tmp_path / "en.json").write_text("{not json", encoding="utf-8")
     assert i18n.load_strings("en", directory=tmp_path) == {}
+
+
+def test_decimal_separators() -> None:
+    """The display separators differ per language (1.5 in English, 1,5 in Indonesian)."""
+    assert i18n.load_strings("en")["ui.number.decimal_separator"] == "."
+    assert i18n.load_strings("id")["ui.number.decimal_separator"] == ","

@@ -11,6 +11,11 @@ Item {
     required property var settings
     required property var wizard
 
+    // 1.5 -> "1.5" (English) or "1,5" (Indonesian): display only, typing either works.
+    function decimalText(number) {
+        return String(number).replace(".", i18n.strings["ui.number.decimal_separator"])
+    }
+
     readonly property var eventKinds: ["chat", "gift", "follow", "like", "share", "repost"]
     readonly property var languageOptions: [
         { value: "auto", label: i18n.strings["ui.lang.auto"] },
@@ -149,7 +154,7 @@ Item {
                 LabeledField {
                     label: i18n.strings["ui.settings.live_hours"]
                     hint: i18n.strings["ui.settings.live_hours_hint"]
-                    text: root.settings.liveHours.toString()
+                    text: root.decimalText(root.settings.liveHours)
                     onCommitted: (value) => {
                         const hours = parseFloat(value.replace(",", "."))
                         if (!isNaN(hours)) root.settings.setLiveHours(hours)
@@ -162,7 +167,7 @@ Item {
                 LabeledField {
                     label: i18n.strings["ui.settings.gift_delay"]
                     hint: i18n.strings["ui.settings.gift_delay_hint"]
-                    text: root.settings.giftDelay.toString()
+                    text: root.decimalText(root.settings.giftDelay)
                     onCommitted: (value) => {
                         const seconds = parseFloat(value.replace(",", "."))
                         if (!isNaN(seconds)) root.settings.setGiftDelay(seconds)
