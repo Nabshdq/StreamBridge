@@ -3,7 +3,9 @@
 import json
 from unittest.mock import MagicMock
 
+import httplib2
 import pytest
+from google.auth.exceptions import RefreshError, TransportError
 from googleapiclient.errors import HttpError
 
 from streambridge.core.quota import QuotaTracker
@@ -69,7 +71,12 @@ async def test_lookup_uses_mine_only_and_picks_the_live_one(tmp_path):
     set_broadcasts(service, [live_broadcast("old", "complete"), live_broadcast("now", "live")])
     await destination.send("hi")
     kwargs = service.liveBroadcasts.return_value.list.call_args.kwargs
-    assert kwargs == {"part": "snippet,status", "mine": True}  # no second filter
+    assert kwargs == {
+        "part": "snippet,status",
+        "mine": True,  # the only filter
+        "broadcastType": "all",  # default "event" would hide 24/7 streams
+        "maxResults": 50,
+    }
     assert insert_call(service).call_args.kwargs["body"]["snippet"]["liveChatId"] == "now"
 
 
@@ -131,7 +138,14 @@ async def test_quota_exceeded_from_google_is_a_refusal_not_a_retry(tmp_path):
 
 @pytest.mark.parametrize(
     "error",
-    [http_error(403, "rateLimitExceeded"), http_error(429), http_error(503), OSError("offline")],
+    [
+        http_error(403, "rateLimitExceeded"),
+        http_error(429),
+        http_error(503),
+        httplib2.ServerNotFoundError("offline"),  # what the library raises with no network
+        TransportError("token refresh failed"),
+        OSError("reset"),
+    ],
 )
 async def test_temporary_problems_are_retried(tmp_path, error):
     destination, service, _, _ = make(tmp_path)
@@ -181,3 +195,40 @@ async def test_other_refusals_are_not_retried(tmp_path):
 )
 def test_video_id_from_url(url, expected):
     assert video_id_from_url(url) == expected
+
+
+async def test_network_failure_does_not_use_quota(tmp_path):
+    """A call that never reached Google must not count, however often it is retried."""
+    destination, service, quota, _ = make(tmp_path)
+    set_broadcasts(service, [live_broadcast()])
+    await destination.send("first")
+    used = quota.used
+    insert_call(service).return_value.execute.side_effect = httplib2.ServerNotFoundError("x")
+    for _ in range(5):
+        with pytest.raises(TemporarySendError):
+            await destination.send("again")
+    assert quota.used == used
+
+
+async def test_revoked_login_while_sending_is_a_login_refusal(tmp_path):
+    destination, service, _, _ = make(tmp_path)
+    set_broadcasts(service, [live_broadcast()])
+    insert_call(service).return_value.execute.side_effect = RefreshError("invalid_grant")
+    result = await destination.send("hi")
+    assert (result.ok, result.reason) == (False, REASON_LOGIN)
+
+
+async def test_lookup_login_error_is_a_refusal_not_endless_waiting(tmp_path):
+    destination, service, _, _ = make(tmp_path)
+    service.liveBroadcasts.return_value.list.return_value.execute.side_effect = http_error(401)
+    result = await destination.send("hi")
+    assert (result.ok, result.reason) == (False, REASON_LOGIN)
+
+
+async def test_lookup_quota_error_is_a_refusal(tmp_path):
+    destination, service, _, _ = make(tmp_path)
+    service.liveBroadcasts.return_value.list.return_value.execute.side_effect = http_error(
+        403, "quotaExceeded"
+    )
+    result = await destination.send("hi")
+    assert (result.ok, result.reason) == (False, REASON_QUOTA)
