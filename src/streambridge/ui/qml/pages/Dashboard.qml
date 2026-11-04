@@ -115,6 +115,7 @@ Item {
         }
 
         // One row: the cards share the width, up to their normal width on a wide window.
+        // There are at most three (TikTok, Twitch, YouTube); a fourth would need a wrapping fallback.
         Row {
             id: cards
             Layout.fillWidth: true
