@@ -322,3 +322,66 @@ def test_quota_is_forgotten_when_youtube_is_removed(app):
     backend.set_connection_ids((SOURCE_ID, "twitch"))
     assert backend.quotaBudget == 0
     assert backend.quotaUsed == 0
+
+
+def _report(backend, engine, app, used: int) -> None:
+    """Send one quota report and wait until the UI thread has handled it."""
+    engine.listener.on_counters(_youtube_counters(used, 10_000))
+    pump(app, lambda: backend.quotaUsed == used)
+
+
+def test_gifts_only_notice_appears_at_ninety_percent(app):
+    backend, engines = make_backend(app)
+    backend.start()
+    _report(backend, engines[0], app, 8_999)
+    assert not backend.giftsOnlyNotice
+    _report(backend, engines[0], app, 9_000)
+    assert backend.giftsOnlyNotice
+
+
+def test_gifts_only_notice_stays_hidden_after_dismissal(app):
+    backend, engines = make_backend(app)
+    backend.start()
+    _report(backend, engines[0], app, 9_100)
+    backend.dismissGiftsOnlyNotice()
+    assert not backend.giftsOnlyNotice
+    _report(backend, engines[0], app, 9_200)
+    assert not backend.giftsOnlyNotice  # one-time: later reports do not bring it back
+
+
+def test_gifts_only_notice_returns_after_the_quota_resets(app):
+    backend, engines = make_backend(app)
+    backend.start()
+    _report(backend, engines[0], app, 9_100)
+    backend.dismissGiftsOnlyNotice()
+    _report(backend, engines[0], app, 100)  # the midnight Pacific reset
+    assert not backend.giftsOnlyNotice
+    _report(backend, engines[0], app, 9_100)
+    assert backend.giftsOnlyNotice
+
+
+def test_gifts_only_notice_is_not_repeated_on_restart(app):
+    backend, engines = make_backend(app)
+    backend.start()
+    _report(backend, engines[0], app, 9_100)
+    backend.dismissGiftsOnlyNotice()
+    backend.stop()
+    pump(app, lambda: not backend.running)
+
+    backend.start()
+    engines[1].listener.on_counters(_youtube_counters(9_100, 10_000))
+    pump(app, timeout=0.1)
+    assert not backend.giftsOnlyNotice
+
+
+def test_gifts_only_notice_is_cleared_when_youtube_is_removed(app):
+    backend, engines = make_backend(app)
+    backend.set_connection_ids((SOURCE_ID, "youtube"))
+    backend.start()
+    _report(backend, engines[0], app, 9_100)
+    assert backend.giftsOnlyNotice
+    backend.stop()
+    pump(app, lambda: not backend.running)
+
+    backend.set_connection_ids((SOURCE_ID, "twitch"))
+    assert not backend.giftsOnlyNotice

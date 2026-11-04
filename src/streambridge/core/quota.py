@@ -28,6 +28,14 @@ COST_VIDEOS_LIST = 1  # videos.list
 COST_BROADCASTS_LIST = 1  # liveBroadcasts.list
 
 
+def is_gifts_only(used: int, budget: int) -> bool:
+    """True once ``used`` reaches 90% of ``budget``: only gifts and follows should be sent.
+
+    The pipeline and the dashboard both ask this, so they agree at the exact boundary.
+    """
+    return budget > 0 and used / budget >= GIFTS_ONLY_FRACTION
+
+
 _shared: dict[Path, "QuotaTracker"] = {}
 
 
@@ -78,7 +86,7 @@ class QuotaTracker:
     @property
     def gifts_only(self) -> bool:
         """True once usage reaches 90%: only gifts and follows should be sent."""
-        return self.fraction >= GIFTS_ONLY_FRACTION
+        return is_gifts_only(self.used, self.budget)
 
     def record(self, cost: int) -> None:
         """Add ``cost`` units for one API call and save the new total."""

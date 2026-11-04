@@ -2,7 +2,13 @@
 
 from datetime import datetime
 
-from streambridge.core.quota import COST_INSERT, PACIFIC, QuotaTracker, pacific_date
+from streambridge.core.quota import (
+    COST_INSERT,
+    PACIFIC,
+    QuotaTracker,
+    is_gifts_only,
+    pacific_date,
+)
 
 
 def at(year, month, day, hour, minute=0) -> float:
@@ -66,3 +72,10 @@ def test_pacific_date_follows_daylight_saving():
     # 2026-03-08 02:00 PT is when US clocks jump forward; the date logic must not break.
     assert pacific_date(at(2026, 3, 8, 12)) == "2026-03-08"
     assert pacific_date(at(2026, 3, 9, 0, 30)) == "2026-03-09"
+
+
+def test_is_gifts_only_boundary():
+    assert not is_gifts_only(8_999, 10_000)
+    assert is_gifts_only(9_000, 10_000)
+    assert is_gifts_only(10_000, 10_000)
+    assert not is_gifts_only(0, 0)  # no budget known: never gifts-only

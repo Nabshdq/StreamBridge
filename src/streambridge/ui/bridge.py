@@ -20,6 +20,7 @@ from streambridge.core.assembly import SetupError
 from streambridge.core.engine import EngineListener, RelayEngine
 from streambridge.core.events import ConnectionStatus
 from streambridge.core.pipeline import Counters
+from streambridge.core.quota import is_gifts_only
 from streambridge.ui.feed_model import FeedModel, FeedRow
 
 logger = logging.getLogger(__name__)
@@ -67,6 +68,7 @@ class Backend(QObject):
     connectionsChanged = Signal()
     countersChanged = Signal()
     errorChanged = Signal()
+    giftsOnlyNoticeChanged = Signal()
 
     # Signals used only to hop from the engine thread to the UI thread.
     _status_in = Signal(str, str, str)
@@ -102,6 +104,8 @@ class Backend(QObject):
         ]
         self._sent = self._filtered = self._dropped = self._rejected = self._waiting = 0
         self._quota_used = self._quota_budget = 0  # a daily count: not reset per session
+        self._gifts_only_notice = False  # shown until the user dismisses it
+        self._notice_dismissed = False  # stays True until usage drops below 90% again
 
         self._status_in.connect(self._on_status)
         self._message_in.connect(self._on_message)
@@ -137,6 +141,9 @@ class Backend(QObject):
     # quotaBudget is 0 until the engine reports a quota; the dashboard hides the counter then.
     quotaUsed = Property(int, lambda self: self._quota_used, notify=countersChanged)
     quotaBudget = Property(int, lambda self: self._quota_budget, notify=countersChanged)
+    giftsOnlyNotice = Property(
+        bool, lambda self: self._gifts_only_notice, notify=giftsOnlyNoticeChanged
+    )
 
     def set_connection_ids(self, connection_ids: Sequence[str]) -> None:
         """Change which status cards are shown. Ignored while the relay is running."""
@@ -151,6 +158,8 @@ class Backend(QObject):
         self.connectionsChanged.emit()
         if not any(cid.startswith("youtube") for cid in wanted) and self._quota_budget:
             self._quota_used = self._quota_budget = 0  # YouTube was removed: forget its quota
+            self._notice_dismissed = False
+            self._set_gifts_only_notice(False)
             self.countersChanged.emit()
 
     # --- Commands from QML --------------------------------------------------
@@ -179,6 +188,12 @@ class Backend(QObject):
         self.connectionsChanged.emit()
         self._set_running(True)
         engine.start()
+
+    @Slot()
+    def dismissGiftsOnlyNotice(self) -> None:
+        """Hide the gifts-only notice. It stays hidden until usage drops below 90% again."""
+        self._notice_dismissed = True
+        self._set_gifts_only_notice(False)
 
     @Slot()
     def stop(self) -> None:
@@ -227,6 +242,7 @@ class Backend(QObject):
         used, budget = self._read_quota(counters)
         if budget:  # a report without a quota (new session, still waiting) keeps the last one
             self._quota_used, self._quota_budget = used, budget
+        self._update_gifts_only_notice()
         self.countersChanged.emit()
 
     @staticmethod
@@ -241,6 +257,23 @@ class Backend(QObject):
         if budget <= 0 or not counters.quota_used:
             return 0, 0
         return max(counters.quota_used.values()), budget  # max, not sum: one shared tracker
+
+    def _update_gifts_only_notice(self) -> None:
+        """Show the notice once when the quota reaches the gifts-only level.
+
+        After a dismissal it stays hidden for the rest of the quota day; it is armed
+        again only when usage falls below the level (the midnight Pacific reset).
+        """
+        if is_gifts_only(self._quota_used, self._quota_budget):
+            self._set_gifts_only_notice(not self._notice_dismissed)
+        else:
+            self._notice_dismissed = False
+            self._set_gifts_only_notice(False)
+
+    def _set_gifts_only_notice(self, value: bool) -> None:
+        if self._gifts_only_notice != value:
+            self._gifts_only_notice = value
+            self.giftsOnlyNoticeChanged.emit()
 
     @Slot()
     def _on_stopped(self) -> None:

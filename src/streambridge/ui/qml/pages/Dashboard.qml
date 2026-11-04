@@ -80,6 +80,40 @@ Item {
             }
         }
 
+        // Shown once when the YouTube quota reaches the gifts-only level; the user dismisses it.
+        Rectangle {
+            Layout.fillWidth: true
+            visible: root.bridge.giftsOnlyNotice
+            implicitHeight: noticeRow.implicitHeight + Theme.space2 * 2
+            radius: Theme.radiusMedium
+            color: Theme.surface
+            border.width: 1
+            border.color: Theme.attention
+
+            RowLayout {
+                id: noticeRow
+                anchors.fill: parent
+                anchors.margins: Theme.space2
+                spacing: Theme.space2
+                SvgIcon {
+                    name: "triangle-alert"
+                    color: Theme.attention
+                }
+                Text {
+                    Layout.fillWidth: true
+                    text: i18n.strings["ui.dashboard.quota_gifts_only"]
+                    wrapMode: Text.Wrap
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.bodySize
+                    color: Theme.text
+                }
+                SecondaryButton {
+                    text: i18n.strings["ui.dashboard.quota_gifts_only_ok"]
+                    onClicked: root.bridge.dismissGiftsOnlyNotice()
+                }
+            }
+        }
+
         Flow {
             Layout.fillWidth: true
             spacing: Theme.space2

@@ -18,6 +18,8 @@
   "ui.counter.filtered": "Filtered",
   "ui.counter.dropped": "Dropped",
   "ui.counter.youtube_quota": "YouTube quota",
+  "ui.dashboard.quota_gifts_only": "YouTube quota is almost used up. Until it resets (midnight Pacific time), only gifts and follows go to YouTube.",
+  "ui.dashboard.quota_gifts_only_ok": "Got it",
   "ui.number.group_separator": ",",
   "ui.feed.empty_running": "Waiting for the first message...",
   "ui.feed.empty_idle": "Press Start to begin relaying.",
