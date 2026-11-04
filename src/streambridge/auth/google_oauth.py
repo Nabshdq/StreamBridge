@@ -108,6 +108,13 @@ def logout(store: SecretStore) -> None:
 
 
 def _save(store: SecretStore, credentials: Credentials) -> None:
-    """Store the token (as JSON) in the secret store."""
+    """Store the login (as JSON) in the secret store, without the short-lived access token.
+
+    Windows Credential Manager keeps a value as UTF-16, which limits it to about
+    1,280 characters, and Google access tokens can be long. The refresh token is
+    all that is needed: the access token is fetched again at the next start.
+    """
     data: dict[str, Any] = json.loads(credentials.to_json())
+    data.pop("token", None)
+    data.pop("expiry", None)
     save_json(store, YOUTUBE_TOKEN_KEY, data)

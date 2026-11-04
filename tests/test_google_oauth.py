@@ -56,7 +56,9 @@ def test_login_saves_token_in_the_secret_store(tmp_path, monkeypatch):
     )
     store = MemoryStore()
     google_oauth.login(store, secret)
-    assert json.loads(store.get(YOUTUBE_TOKEN_KEY))["refresh_token"] == "r"
+    saved = json.loads(store.get(YOUTUBE_TOKEN_KEY))
+    assert saved["refresh_token"] == "r"
+    assert "token" not in saved  # too long for Credential Manager; fetched again at start
     assert flow.run_local_server.call_args.kwargs["port"] == 0
 
 
@@ -74,7 +76,8 @@ def test_load_refreshes_and_saves_new_token(monkeypatch):
     )
     assert google_oauth.load_credentials(store) is credentials
     credentials.refresh.assert_called_once()
-    assert json.loads(store.get(YOUTUBE_TOKEN_KEY))["token"] == "new"
+    assert "token" not in json.loads(store.get(YOUTUBE_TOKEN_KEY))
+    assert json.loads(store.get(YOUTUBE_TOKEN_KEY))["refresh_token"] == "r"
 
 
 def test_revoked_login_asks_to_log_in_again(monkeypatch):
