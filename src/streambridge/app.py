@@ -21,6 +21,7 @@ from streambridge.core.outqueue import YOUTUBE_MAX_QUEUE
 from streambridge.core.ratelimit import TWITCH_RULES, YOUTUBE_RULES
 from streambridge.core.secrets import KeyringStore
 from streambridge.destinations.console import ConsoleDestination
+from streambridge.destinations.youtube import youtube_factory
 from streambridge.ui.bridge import SOURCE_ID, Backend, EngineFactory
 from streambridge.ui.icons import IconProvider
 from streambridge.ui.settings_bridge import SettingsBridge
@@ -83,13 +84,13 @@ def fake_engine_factory() -> EngineFactory:
 def real_engine_factory() -> EngineFactory:
     """Engine factory for the real app: settings from ``config.json``, secrets from keyring.
 
-    Destination factories are added when the Twitch and YouTube destinations are wired in.
+    Only YouTube is wired in so far; the Twitch factory is added with the Twitch wiring.
     """
     store = KeyringStore()
 
     def build(listener: EngineListener) -> RelayEngine:
         config = load_config()  # re-read on every Start so Settings changes apply
-        return assemble_engine(config, store, {}, listener).engine
+        return assemble_engine(config, store, {"youtube": youtube_factory}, listener).engine
 
     return build
 

@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
+from streambridge.core.quota import QuotaTracker
 from streambridge.core.ratelimit import RateRule
 
 
@@ -40,6 +41,8 @@ class Destination(ABC):
     max_length: int = 500
     rate_rules: tuple[RateRule, ...] = ()
     max_queue_size: int | None = None
+    quota: QuotaTracker | None = None
+    """Daily quota counter, for destinations that have one (YouTube)."""
 
     async def start(self) -> None:  # noqa: B027 - optional hook, empty by default
         """Prepare for sending (log in, find the chat). Raise if this is impossible."""

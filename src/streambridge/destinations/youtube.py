@@ -31,17 +31,24 @@ from google.auth.exceptions import RefreshError, TransportError
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from streambridge.auth.google_oauth import YouTubeAuthError, load_credentials
+from streambridge.auth.google_oauth import (
+    YouTubeAuthError,
+    has_client_secret,
+    load_credentials,
+)
+from streambridge.core.config import AppConfig
 from streambridge.core.formatter import YOUTUBE_MAX_LENGTH
 from streambridge.core.outqueue import YOUTUBE_MAX_QUEUE
+from streambridge.core.paths import quota_file
 from streambridge.core.quota import (
     COST_BROADCASTS_LIST,
     COST_INSERT,
     COST_VIDEOS_LIST,
     QuotaTracker,
+    shared_quota,
 )
 from streambridge.core.ratelimit import YOUTUBE_RULES
-from streambridge.core.secrets import SecretStore
+from streambridge.core.secrets import YOUTUBE_TOKEN_KEY, SecretStore
 from streambridge.destinations.base import Destination, SendResult, TemporarySendError
 
 logger = logging.getLogger(__name__)
@@ -270,3 +277,15 @@ class YouTubeDestination(Destination):
         if credentials is None:
             raise YouTubeAuthError("Not logged in to YouTube yet.")
         return build("youtube", "v3", credentials=credentials, cache_discovery=False)
+
+
+def youtube_factory(config: AppConfig, store: SecretStore) -> YouTubeDestination | None:
+    """Create the YouTube destination, or ``None`` if it is not set up yet.
+
+    "Set up" means the user loaded ``client_secret.json`` and logged in. This is
+    a cheap check on purpose: it never contacts Google (``start`` does that, in
+    a worker thread).
+    """
+    if not has_client_secret() or not store.get(YOUTUBE_TOKEN_KEY):
+        return None
+    return YouTubeDestination(store, shared_quota(quota_file()), live_url=config.youtube.live_url)

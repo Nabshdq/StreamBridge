@@ -28,6 +28,16 @@ COST_VIDEOS_LIST = 1  # videos.list
 COST_BROADCASTS_LIST = 1  # liveBroadcasts.list
 
 
+_shared: dict[Path, "QuotaTracker"] = {}
+
+
+def shared_quota(path: Path) -> "QuotaTracker":
+    """One tracker per file, so the destination and the dashboard count the same units."""
+    if path not in _shared:
+        _shared[path] = QuotaTracker(path)
+    return _shared[path]
+
+
 def pacific_date(timestamp: float) -> str:
     """Return the Pacific-time calendar date of ``timestamp`` as ``YYYY-MM-DD``."""
     return datetime.fromtimestamp(timestamp, PACIFIC).date().isoformat()
