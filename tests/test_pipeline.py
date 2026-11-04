@@ -167,3 +167,15 @@ def test_test_message_goes_first_everywhere() -> None:
     pipeline.enqueue_text("StreamBridge test")
     assert texts(twitch)[0] == "StreamBridge test"
     assert texts(youtube)[0] == "StreamBridge test"
+
+
+def test_compact_overflow_is_counted_as_dropped() -> None:
+    """Chat that does not fit in a keep-newest batch shows up in the dropped counter."""
+    youtube = make_route("youtube", max_length=40, compact=True)
+    youtube.batcher.keep_newest = True
+    pipeline = make_pipeline(youtube)
+    for name in ("Aaaa", "Bbbb", "Cccc", "Dddd"):
+        pipeline.handle(event("chat", user=name, text="halo"), now=0.0)
+    pipeline.tick(now=10.0)
+    assert pipeline.counters.dropped["youtube"] > 0
+    assert len(youtube.batcher) == 0

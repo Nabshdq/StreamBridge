@@ -61,3 +61,36 @@ def test_flush_all_empties_everything() -> None:
     batcher.add("Budi", "halo", now=0.0)
     assert batcher.flush_all() == ["💬 TikTok: Budi: halo"]
     assert batcher.flush_all() == []
+
+
+def test_keep_newest_sends_latest_lines_and_drops_the_rest() -> None:
+    """With keep_newest, what does not fit is dropped and counted, newest wins."""
+    batcher = ChatBatcher(PREFIX, window=10.0, max_length=50, keep_newest=True)
+    for name in ("aaa", "bbb", "ccc", "ddd", "eee"):
+        batcher.add(name, "hello", now=0.0)
+    (message,) = batcher.pop_due(now=10.0)
+    assert len(message) <= 50
+    assert message.endswith("eee: hello")
+    assert "aaa" not in message
+    assert len(batcher) == 0  # nothing carried over
+    assert batcher.last_pop_dropped > 0
+    assert batcher.dropped_count == batcher.last_pop_dropped
+
+
+def test_keep_newest_keeps_order_inside_the_message() -> None:
+    """The chosen lines stay in the order they were written."""
+    batcher = ChatBatcher(PREFIX, window=1.0, keep_newest=True)
+    batcher.add("a", "1", now=0.0)
+    batcher.add("b", "2", now=0.0)
+    assert batcher.pop_due(now=1.0) == [f"{PREFIX} a: 1 · b: 2"]
+    assert batcher.last_pop_dropped == 0
+
+
+def test_keep_newest_shortens_a_single_huge_line() -> None:
+    """If even the newest line is too long it is truncated, older ones dropped."""
+    batcher = ChatBatcher(PREFIX, window=1.0, max_length=30, keep_newest=True)
+    batcher.add("old", "x", now=0.0)
+    batcher.add("big", "y" * 100, now=0.0)
+    (message,) = batcher.pop_due(now=1.0)
+    assert len(message) <= 30
+    assert batcher.last_pop_dropped == 1

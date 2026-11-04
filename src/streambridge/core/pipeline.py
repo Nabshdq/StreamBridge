@@ -117,6 +117,7 @@ class Pipeline:
         for route in self.routes:
             if route.batcher is not None:
                 for text in route.batcher.pop_due(now):
+                    self.counters.dropped[route.name] += route.batcher.last_pop_dropped
                     self._deliver(route, OutMessage.for_kind(text, "chat"))
 
     def flush_all(self, now: float) -> None:

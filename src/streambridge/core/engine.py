@@ -326,6 +326,7 @@ class RelayEngine:
             prefix=translator.text("relay.compact_prefix"),
             window=self._settings.compact_window,
             max_length=destination.max_length,
+            keep_newest=True,
         )
 
     def _make_filter(self, translator: Translator) -> MessageFilter:
