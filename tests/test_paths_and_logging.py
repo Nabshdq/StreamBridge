@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+import streambridge
 from streambridge.core import logging_setup, paths
 
 
@@ -23,10 +24,11 @@ def test_windows_locations(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> N
     assert paths.log_dir() == tmp_path / "Local" / "StreamBridge" / "logs"
 
 
-def test_resources_dir_is_repo_folder() -> None:
-    """The resources folder sits at the repo root, next to src/."""
-    assert paths.resources_dir().name == "resources"
-    assert (paths.resources_dir().parent / "src" / "streambridge").is_dir()
+def test_resources_dir_is_inside_the_package() -> None:
+    """Resources live inside the package, so a packaged build finds them too."""
+    package_dir = Path(streambridge.__file__).resolve().parent
+    assert paths.resources_dir() == package_dir / "resources"
+    assert (paths.resources_dir() / "i18n" / "en.json").is_file()
 
 
 def test_setup_logging_writes_file(tmp_home: Path) -> None:

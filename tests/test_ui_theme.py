@@ -15,9 +15,11 @@ from PySide6.QtCore import QUrl  # noqa: E402
 from PySide6.QtGui import QGuiApplication  # noqa: E402
 from PySide6.QtQml import QQmlComponent, QQmlEngine  # noqa: E402
 
+from streambridge.core import paths  # noqa: E402
+
 QML_DIR = Path(__file__).resolve().parents[1] / "src" / "streambridge" / "ui" / "qml"
-FONT_DIR = Path(__file__).resolve().parents[1] / "resources" / "fonts"
-ICON_DIR = Path(__file__).resolve().parents[1] / "resources" / "icons"
+FONT_DIR = paths.resources_dir() / "fonts"
+ICON_DIR = paths.resources_dir() / "icons"
 
 
 @pytest.fixture(scope="module")

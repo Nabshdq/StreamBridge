@@ -56,10 +56,10 @@ def log_dir() -> Path:
 
 
 def resources_dir() -> Path:
-    """Folder with bundled read-only files (translations, word lists).
+    """Folder with bundled read-only files (translations, word lists, icons, fonts).
 
-    During development this is ``<repo>/resources``. Packaging (Phase 7)
-    copies the same folder next to the app.
+    It lives inside the package (``streambridge/resources``), so the same
+    line works from source, from an editable install and from a packaged build.
     """
-    # src/streambridge/core/paths.py -> parents[3] is the repo root.
-    return Path(__file__).resolve().parents[3] / "resources"
+    # src/streambridge/core/paths.py -> parents[1] is the streambridge package.
+    return Path(__file__).resolve().parents[1] / "resources"

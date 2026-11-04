@@ -81,7 +81,7 @@ Project layout:
 | `src/streambridge/core/` | Relay engine: events, filters, queues, rate limits, settings |
 | `src/streambridge/sources/` | Where events come from (TikTok) |
 | `src/streambridge/destinations/` | Where messages go (console for now; Twitch and YouTube later) |
-| `resources/` | Translations and the default rude-word list |
+| `src/streambridge/resources/` | Translations, the default rude-word list, icons and fonts |
 | `tools/` | Command-line tool and simulated TikTok source |
 | `tests/` | Automated tests (pytest) |
 

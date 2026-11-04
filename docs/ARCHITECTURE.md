@@ -53,7 +53,7 @@ Example: a viewer called Budi sends three Roses on TikTok.
 5. **Routing** (`core/pipeline.py`) sends the event to every destination
    whose event toggles allow it.
 6. **Formatting** (`core/formatter.py`) fills the destination's template in
-   the relay language (`core/i18n.py`, `resources/i18n/*.json`) and cuts it
+   the relay language (`core/i18n.py`, `src/streambridge/resources/i18n/*.json`) and cuts it
    to the platform limit (Twitch 500, YouTube 200 characters). For YouTube,
    chat can first be joined into one message (`core/batching.py`).
 7. **Queue** (`core/outqueue.py`): gifts, follows, shares and reposts go
