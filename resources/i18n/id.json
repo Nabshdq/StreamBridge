@@ -55,6 +55,8 @@
   "ui.settings.youtube_quota_hint": "YouTube hanya mengizinkan sekitar 500 pesan per hari, jadi pengikut, suka, bagikan, dan repost awalnya mati.",
   "ui.settings.compact": "Mode ringkas: gabungkan beberapa chat jadi satu pesan",
   "ui.settings.messages": "Pesan",
+  "ui.settings.live_hours": "Biasanya LIVE Anda berlangsung berapa lama (jam)",
+  "ui.settings.live_hours_hint": "Antara 0,5 dan 12 jam. StreamBridge membagi pesan ke YouTube supaya kuota harian cukup selama itu. Berlaku saat Anda menekan Mulai lagi.",
   "ui.settings.gift_delay": "Gabungkan hadiah yang sama dalam (detik)",
   "ui.settings.gift_delay_hint": "Antara 1 dan 30 detik.",
   "ui.settings.filters": "Filter",

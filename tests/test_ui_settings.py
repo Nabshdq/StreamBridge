@@ -162,3 +162,22 @@ def test_compact_mode_is_saved(tmp_path: Path) -> None:
     bridge, _, path = make(tmp_path)
     bridge.setCompactMode(False)
     assert load_config(path).youtube.compact_mode is False
+
+
+@pytest.mark.parametrize(
+    ("typed", "expected"),
+    [
+        (4.0, 4.0),
+        (0.0, 0.5),
+        (-2.0, 0.5),
+        (99.0, 12.0),
+        (float("nan"), 3.0),
+        (float("inf"), 3.0),
+    ],
+)
+def test_live_hours_are_kept_in_a_safe_range(typed: float, expected: float, tmp_path: Path) -> None:
+    bridge, _, path = make(tmp_path)
+    assert bridge.liveHours == 3.0
+    bridge.setLiveHours(typed)
+    assert bridge.liveHours == expected
+    assert load_config(path).youtube.live_hours == expected

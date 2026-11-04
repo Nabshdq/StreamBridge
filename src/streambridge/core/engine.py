@@ -105,6 +105,7 @@ class EngineSettings:
         return cls(
             relay_language=config.relay_language,
             gift_delay=config.gift_delay,
+            live_target=config.youtube.live_hours * 3600,
             spam_phrases=tuple(config.filters.spam_phrases),
             rude_words=tuple(rude_words),
         )

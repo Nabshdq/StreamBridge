@@ -246,3 +246,13 @@ def test_engine_can_restart() -> None:
         wait_until(lambda: engine.counters.sent.get("rec") == 1)
         engine.stop()
     assert len(destination.sent) == 2
+
+
+def test_live_length_setting_becomes_the_pacing_target() -> None:
+    """The LIVE length from Settings (hours) reaches the engine in seconds."""
+    from streambridge.core.config import AppConfig
+
+    assert EngineSettings.from_config(AppConfig()).live_target == 3 * 3600.0
+    config = AppConfig()
+    config.youtube.live_hours = 1.5
+    assert EngineSettings.from_config(config).live_target == 5400.0

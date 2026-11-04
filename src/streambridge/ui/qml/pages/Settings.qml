@@ -146,6 +146,15 @@ Item {
                     checked: root.settings.compactMode
                     onToggled: (value) => root.settings.setCompactMode(value)
                 }
+                LabeledField {
+                    label: i18n.strings["ui.settings.live_hours"]
+                    hint: i18n.strings["ui.settings.live_hours_hint"]
+                    text: root.settings.liveHours.toString()
+                    onCommitted: (value) => {
+                        const hours = parseFloat(value.replace(",", "."))
+                        if (!isNaN(hours)) root.settings.setLiveHours(hours)
+                    }
+                }
             }
 
             SectionCard {

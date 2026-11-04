@@ -55,6 +55,8 @@
   "ui.settings.youtube_quota_hint": "YouTube allows about 500 messages a day, so follows, likes, shares and reposts start off.",
   "ui.settings.compact": "Compact mode: join chat lines into one message",
   "ui.settings.messages": "Messages",
+  "ui.settings.live_hours": "How long your LIVE usually lasts (hours)",
+  "ui.settings.live_hours_hint": "Between 0.5 and 12 hours. StreamBridge spreads YouTube messages so the daily quota lasts this long. Applies from the next Start.",
   "ui.settings.gift_delay": "Merge identical gifts within (seconds)",
   "ui.settings.gift_delay_hint": "Between 1 and 30 seconds.",
   "ui.settings.filters": "Filters",

@@ -3,6 +3,9 @@
 import json
 from pathlib import Path
 
+import pytest
+
+from streambridge.core import paths
 from streambridge.core.config import AppConfig, load_config, save_config
 from streambridge.core.filters import DEFAULT_SPAM_PHRASES
 
@@ -127,3 +130,29 @@ def test_non_object_file_gives_defaults(tmp_home: Path) -> None:
     """A JSON list instead of an object is treated as broken."""
     (tmp_home / "config.json").write_text("[1, 2, 3]", encoding="utf-8")
     assert load_config() == AppConfig()
+
+
+def test_live_hours_defaults_to_three_and_survives_a_reload(tmp_home: Path) -> None:
+    """The planned LIVE length is saved to the file and read back."""
+    assert AppConfig().youtube.live_hours == 3.0
+    config = AppConfig()
+    config.youtube.live_hours = 5.5
+    save_config(config)
+    saved = json.loads(paths.config_file().read_text(encoding="utf-8"))
+    assert saved["youtube"]["live_hours"] == 5.5
+    assert load_config().youtube.live_hours == 5.5
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [0, -1, 0.1, 13, 1e9, "3", True, None, float("nan"), float("inf")],
+)
+def test_wrong_live_hours_fall_back_to_the_default(bad: object) -> None:
+    """Zero (it would turn pacing off), NaN, infinity and out-of-range values are replaced."""
+    config = AppConfig.from_dict({"youtube": {"live_hours": bad}})
+    assert config.youtube.live_hours == 3.0
+
+
+@pytest.mark.parametrize("good", [0.5, 2, 12])
+def test_live_hours_inside_the_range_are_kept(good: float) -> None:
+    assert AppConfig.from_dict({"youtube": {"live_hours": good}}).youtube.live_hours == good

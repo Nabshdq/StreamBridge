@@ -10,6 +10,7 @@ still start.
 
 import json
 import logging
+import math
 import os
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -20,6 +21,7 @@ from streambridge.core.events import EVENT_KINDS
 from streambridge.core.filters import DEFAULT_SPAM_PHRASES
 from streambridge.core.gifts import DEFAULT_GIFT_DELAY
 from streambridge.core.i18n import AUTO_LANGUAGE, LANGUAGE_SETTINGS
+from streambridge.core.pacing import DEFAULT_LIVE_TARGET, MAX_LIVE_HOURS, MIN_LIVE_HOURS
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +95,7 @@ class YouTubeSettings:
     compact_mode: bool = True
     use_bot_account: bool = False
     live_url: str = ""
+    live_hours: float = DEFAULT_LIVE_TARGET / 3600  # how long the LIVE usually lasts
 
 
 @dataclass
@@ -190,6 +193,12 @@ def _number(data: dict[str, Any], key: str, default: float, minimum: float = 0.0
     return float(value)
 
 
+def _live_hours(data: dict[str, Any], default: float) -> float:
+    """Return the planned LIVE length in hours; NaN, infinity or out-of-range gives ``default``."""
+    value = _number(data, "live_hours", default, minimum=MIN_LIVE_HOURS)
+    return value if math.isfinite(value) and value <= MAX_LIVE_HOURS else default
+
+
 def _text(data: dict[str, Any], key: str, default: str) -> str:
     """Return a string value (trimmed), or ``default``."""
     value = data.get(key)
@@ -256,4 +265,5 @@ def _youtube_from(data: dict[str, Any]) -> YouTubeSettings:
         compact_mode=_bool(data, "compact_mode", True),
         use_bot_account=_bool(data, "use_bot_account", False),
         live_url=_text(data, "live_url", ""),
+        live_hours=_live_hours(data, YouTubeSettings().live_hours),
     )

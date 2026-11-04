@@ -24,6 +24,7 @@ from streambridge.core.config import (
     save_config,
 )
 from streambridge.core.i18n import LANGUAGE_SETTINGS
+from streambridge.core.pacing import DEFAULT_LIVE_TARGET, MAX_LIVE_HOURS, MIN_LIVE_HOURS
 from streambridge.core.secrets import TIKTOK_EULER_KEY, KeyringStore, SecretStore
 from streambridge.ui.translator import UiTranslator
 
@@ -34,6 +35,7 @@ DESTINATIONS = ("twitch", "youtube")
 WORD_LISTS = ("spam", "rude", "allowed")
 MIN_GIFT_DELAY = 1.0
 MAX_GIFT_DELAY = 30.0
+DEFAULT_LIVE_HOURS = DEFAULT_LIVE_TARGET / 3600
 
 
 def clamp_gift_delay(value: float) -> float:
@@ -41,6 +43,13 @@ def clamp_gift_delay(value: float) -> float:
     if not math.isfinite(value):  # nan and +-inf cannot be a delay
         return DEFAULT_GIFT_DELAY
     return min(max(value, MIN_GIFT_DELAY), MAX_GIFT_DELAY)
+
+
+def clamp_live_hours(value: float) -> float:
+    """Return a safe LIVE length in hours for whatever the user typed."""
+    if not math.isfinite(value):  # nan and +-inf cannot be a length
+        return DEFAULT_LIVE_HOURS
+    return min(max(value, MIN_LIVE_HOURS), MAX_LIVE_HOURS)
 
 
 def clean_username(text: str) -> str:
@@ -105,6 +114,7 @@ class SettingsBridge(QObject):
     relayLanguage = Property(str, lambda self: self._config.relay_language, notify=changed)  # type: ignore[arg-type]
     tiktokUsername = Property(str, lambda self: self._config.tiktok.username, notify=changed)  # type: ignore[arg-type]
     giftDelay = Property(float, lambda self: self._config.gift_delay, notify=changed)  # type: ignore[arg-type]
+    liveHours = Property(float, lambda self: self._config.youtube.live_hours, notify=changed)  # type: ignore[arg-type]
     twitchEnabled = Property(bool, lambda self: self._config.twitch.enabled, notify=changed)  # type: ignore[arg-type]
     youtubeEnabled = Property(bool, lambda self: self._config.youtube.enabled, notify=changed)  # type: ignore[arg-type]
 
@@ -158,6 +168,12 @@ class SettingsBridge(QObject):
     def setGiftDelay(self, seconds: float) -> None:
         """Save how long identical gifts are merged, in seconds."""
         self._config.gift_delay = clamp_gift_delay(float(seconds))
+        self._save()
+
+    @Slot(float)
+    def setLiveHours(self, hours: float) -> None:
+        """Save how long the LIVE usually lasts, in hours (spreads the YouTube quota)."""
+        self._config.youtube.live_hours = clamp_live_hours(float(hours))
         self._save()
 
     @Slot(bool)
