@@ -79,12 +79,13 @@ To stay inside this, StreamBridge:
 - joins several chat messages into **one** message (compact mode) and sends
   only the newest chat that fits in 200 characters;
 - by default sends chat and gifts to YouTube, but not follows, likes or shares;
-- (planned) shows "YouTube quota: used / 10,000" and, above 90%, sends only
-  gifts.
+- counts the quota it uses and, above 90%, pauses chat and sends only gifts and
+  follows until the quota resets (built and tested with mocks only, not yet on
+  a real LIVE; the dashboard quota display is still planned).
 
 With 500 messages a day, a 2 to 3 hour LIVE only fits if chat is batched into
-longer windows; StreamBridge is being tuned for this. The chat that does not
-fit is counted as "dropped".
+longer windows; StreamBridge widens or narrows the batching window to match
+the quota that is left. The chat that does not fit is counted as "dropped".
 
 ## Using a separate bot account (advanced)
 

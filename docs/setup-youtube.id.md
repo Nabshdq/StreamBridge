@@ -82,12 +82,14 @@ Agar cukup, StreamBridge:
   mengirim chat terbaru yang muat dalam 200 karakter;
 - secara bawaan mengirim chat dan gift ke YouTube, tetapi tidak follow, like,
   atau share;
-- (rencana) menampilkan "YouTube quota: terpakai / 10.000" dan, di atas 90%,
-  hanya mengirim gift.
+- menghitung kuota yang terpakai dan, di atas 90%, menjeda chat lalu hanya
+  mengirim gift dan follow sampai kuota di-reset (sudah dibuat dan diuji dengan
+  tiruan saja, belum di LIVE sungguhan; tampilan kuota di dashboard masih
+  rencana).
 
 Dengan 500 pesan sehari, LIVE 2 sampai 3 jam hanya cukup jika chat digabung
-dalam jendela waktu yang lebih panjang; StreamBridge sedang disetel untuk ini.
-Chat yang tidak muat dihitung sebagai "dropped".
+dalam jendela waktu yang lebih panjang; StreamBridge menyesuaikan lebar jendela
+dengan sisa kuota. Chat yang tidak muat dihitung sebagai "dropped".
 
 ## Memakai akun bot terpisah (lanjutan)
 
