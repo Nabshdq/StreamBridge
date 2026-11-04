@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import "components"
 import "pages"
+import "wizard"
 
 ApplicationWindow {
     id: window
@@ -21,6 +22,8 @@ ApplicationWindow {
     RowLayout {
         anchors.fill: parent
         spacing: 0
+        // Keep the keyboard out of the screens hidden behind the wizard.
+        enabled: !appWizard.active
 
         // ---- Side menu ----
         Rectangle {
@@ -95,8 +98,16 @@ ApplicationWindow {
 
             Dashboard { bridge: backend }
 
-            Settings { settings: appSettings }
+            Settings { settings: appSettings; wizard: appWizard }
             About { settings: appSettings }
         }
+    }
+
+    // The first-run wizard covers everything until it is finished or closed.
+    Wizard {
+        anchors.fill: parent
+        visible: appWizard.active
+        controller: appWizard
+        settings: appSettings
     }
 }

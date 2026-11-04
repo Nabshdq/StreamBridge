@@ -9,6 +9,7 @@ Item {
     id: root
 
     required property var settings
+    required property var wizard
 
     readonly property var eventKinds: ["chat", "gift", "follow", "like", "share", "repost"]
     readonly property var languageOptions: [
@@ -219,6 +220,22 @@ Item {
                     text: i18n.strings["ui.settings.euler_remove"]
                     iconName: "x"
                     onClicked: root.settings.setEulerKey("")
+                }
+            }
+
+            SectionCard {
+                title: i18n.strings["ui.settings.setup"]
+                Text {
+                    Layout.fillWidth: true
+                    text: i18n.strings["ui.settings.setup_hint"]
+                    wrapMode: Text.Wrap
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.labelSize
+                    color: Theme.textSecondary
+                }
+                SecondaryButton {
+                    text: i18n.strings["ui.settings.setup_run"]
+                    onClicked: root.wizard.restart()
                 }
             }
         }
