@@ -305,7 +305,7 @@ def test_quota_stays_when_the_relay_is_restarted(app):
 
     # The new engine's first report has no quota yet (YouTube is still waiting).
     engines[1].listener.on_counters(Counters())
-    pump(app)  # let the queued report reach the UI thread
+    pump(app, timeout=0.1)  # let the queued report reach the UI thread
     assert backend.quotaUsed == 240
     assert backend.quotaBudget == 10_000
 

@@ -97,7 +97,7 @@ Item {
         // A Flow, so the counters wrap onto a second line on a narrow window.
         Flow {
             Layout.fillWidth: true
-            spacing: Theme.space4
+            spacing: Theme.space2
             Counter { label: i18n.strings["ui.counter.sent"]; value: root.bridge.sentCount }
             Counter { label: i18n.strings["ui.counter.waiting"]; value: root.bridge.waitingCount }
             Counter { label: i18n.strings["ui.counter.filtered"]; value: root.bridge.filteredCount }
