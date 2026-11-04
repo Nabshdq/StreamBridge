@@ -69,7 +69,7 @@ Example: a viewer called Budi sends three Roses on TikTok.
 
 | Package | What lives there |
 |---|---|
-| `core/` | Everything platform-independent: events, filters, queues, rate limits, the engine, settings (`config.py`), secrets (`secrets.py`), and `assembly.py`, which builds an engine from the user's settings |
+| `core/` | Everything platform-independent: events, filters, queues, rate limits, the engine, settings (`config.py`), secrets (`secrets.py`), and `assembly.py`, which builds an engine from the user's settings, and `selfcheck.py`, the startup check that refuses to run when bundled resources are missing |
 | `sources/` | Where events come from. `base.Source` is the interface; `tiktok.py` is the real one |
 | `destinations/` | Where messages go. `base.Destination` is the interface; `console.py` (for development) and `twitch.py` |
 | `auth/` | Logins: `twitch_device.py` (Twitch device code flow, refresh, hourly validation) |

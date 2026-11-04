@@ -7,6 +7,7 @@ import pytest
 import cli
 from fake_source import FakeSource
 from streambridge.auth import twitch_device
+from streambridge.core import paths
 from streambridge.core.config import AppConfig
 from streambridge.core.secrets import (
     TIKTOK_EULER_KEY,
@@ -166,6 +167,19 @@ def test_cli_fake_run_prints_messages(tmp_home: Path, capsys: pytest.CaptureFixt
     assert "[twitch-sim]" in output.out
     assert "[youtube-sim]" in output.out
     assert "--- summary ---" in output.err
+
+
+def test_cli_refuses_to_run_without_resources(
+    tmp_home: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A broken install stops the CLI with exit code 2 and a message on stderr."""
+    monkeypatch.setattr(paths, "resources_dir", lambda: tmp_path / "no-resources")
+    exit_code = cli.main(["--fake", "--duration", "0.1"])
+    assert exit_code == 2
+    assert "icons/play.svg" in capsys.readouterr().err
 
 
 def test_youtube_logout_forgets_the_login(memory_keyring: MemoryStore) -> None:
