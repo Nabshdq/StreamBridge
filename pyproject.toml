@@ -29,6 +29,9 @@ dependencies = [
     "keyring>=25.7",
     # Windows has no time-zone database; YouTube quota resets on Pacific time.
     "tzdata>=2024.1",
+    # YouTube. Pinned exactly: the Google libraries change often.
+    "google-api-python-client==2.201.0",
+    "google-auth-oauthlib==1.5.0",
     # The desktop UI. Pinned exactly so the Qt runtime only changes on purpose.
     "PySide6==6.12.0",
 ]
