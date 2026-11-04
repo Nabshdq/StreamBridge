@@ -14,10 +14,15 @@ Examples::
     python tools/cli.py --tiktok @username --twitch     # relay to real Twitch chat
     python tools/cli.py --tiktok @username --twitch --twitch-channel streamer  # bot
 
+    python tools/cli.py --youtube-import-secret client_secret.json   # copy your Google file
+    python tools/cli.py --youtube-login                 # opens the browser (not yet tested live)
+    python tools/cli.py --youtube-logout                # forget the YouTube login
+    python tools/cli.py --tiktok @username --youtube    # relay to real YouTube live chat
+
 Events (simulated with ``--fake``, or from a real LIVE with ``--tiktok``) are
 relayed to two console destinations that behave like Twitch (500 characters,
 80 messages / 30 s, never drops) and YouTube (200 characters, compact mode,
-queue of 30). With ``--twitch`` the real Twitch chat replaces the Twitch one.
+queue of 30). With ``--twitch`` or ``--youtube`` the real chat replaces the simulated one.
 
 ``--euler-key`` is only used for one run. ``--save-euler-key KEY`` stores the
 key in the Windows Credential Manager so ``--tiktok`` uses it automatically;
@@ -36,6 +41,7 @@ from typing import Any
 import httpx
 
 from fake_source import FakeSource
+from streambridge.auth import google_oauth
 from streambridge.auth.twitch_device import (
     BOT_SCOPES,
     BROADCASTER_SCOPES,
@@ -65,6 +71,7 @@ from streambridge.core.secrets import (
 from streambridge.destinations.base import Destination
 from streambridge.destinations.console import ConsoleDestination
 from streambridge.destinations.twitch import TwitchDestination
+from streambridge.destinations.youtube import youtube_factory
 from streambridge.sources.base import Source
 from streambridge.sources.tiktok import TikTokSource
 
@@ -140,6 +147,24 @@ def build_parser() -> argparse.ArgumentParser:
         default="",
         help="channel the bot posts to (bot mode; the bot must be a moderator there)",
     )
+
+    youtube = parser.add_argument_group("YouTube")
+    yt_command = youtube.add_mutually_exclusive_group()
+    yt_command.add_argument(
+        "--youtube-import-secret",
+        type=Path,
+        metavar="PATH",
+        help="copy your client_secret.json (Desktop app) into the app folder",
+    )
+    yt_command.add_argument(
+        "--youtube-login", action="store_true", help="log in to Google in the browser"
+    )
+    yt_command.add_argument(
+        "--youtube-logout", action="store_true", help="forget the YouTube login"
+    )
+    youtube.add_argument(
+        "--youtube", action="store_true", help="send to the real YouTube chat (not youtube-sim)"
+    )
     return parser
 
 
@@ -156,13 +181,15 @@ def build_twitch_destination(args: argparse.Namespace, store: SecretStore) -> De
 
 
 def build_destinations(
-    config: AppConfig, twitch_destination: Destination | None = None
+    config: AppConfig,
+    twitch_destination: Destination | None = None,
+    youtube_destination: Destination | None = None,
 ) -> list[DestinationSetup]:
-    """Twitch (simulated unless a real one is given) and a simulated YouTube."""
+    """Twitch and YouTube, each simulated unless a real one is given."""
     twitch = twitch_destination or ConsoleDestination(
         "twitch-sim", TWITCH_MAX_LENGTH, TWITCH_RULES, max_queue_size=None
     )
-    youtube = ConsoleDestination(
+    youtube = youtube_destination or ConsoleDestination(
         "youtube-sim", YOUTUBE_MAX_LENGTH, YOUTUBE_RULES, max_queue_size=YOUTUBE_MAX_QUEUE
     )
     return [
@@ -248,17 +275,38 @@ def run_twitch_account_command(args: argparse.Namespace, store: SecretStore) -> 
     return 0
 
 
+def run_youtube_account_command(args: argparse.Namespace, store: SecretStore) -> int:
+    """Handle --youtube-import-secret, --youtube-login and --youtube-logout."""
+    if args.youtube_logout:
+        google_oauth.logout(store)
+        print("YouTube login removed from this PC.", file=sys.stderr)
+        return 0
+    try:
+        if args.youtube_import_secret is not None:
+            google_oauth.import_client_secret(args.youtube_import_secret)
+            print("client_secret.json copied into the app folder.", file=sys.stderr)
+            return 0
+        google_oauth.login(store)
+    except google_oauth.YouTubeAuthError as error:
+        print(f"[error] {error}", file=sys.stderr)
+        return 1
+    print("Logged in to YouTube. The login is saved.", file=sys.stderr)
+    return 0
+
+
 def print_summary(counters: Counters | None) -> None:
     """Print the final counters."""
     if counters is None:
         return
     print("\n--- summary ---", file=sys.stderr)
     for name, sent in counters.sent.items():
-        print(
+        line = (
             f"{name}: sent {sent}, dropped {counters.dropped.get(name, 0)}, "
-            f"refused {counters.rejected.get(name, 0)}",
-            file=sys.stderr,
+            f"refused {counters.rejected.get(name, 0)}"
         )
+        if name in counters.quota_used:
+            line += f", quota {counters.quota_used[name]} / {counters.quota_budget}"
+        print(line, file=sys.stderr)
     print(f"filtered (spam): {counters.filtered}", file=sys.stderr)
     print(f"not sent (stopped): {counters.unsent_on_stop}", file=sys.stderr)
 
@@ -267,10 +315,15 @@ def main(argv: list[str] | None = None) -> int:
     """Run the CLI. Returns the process exit code."""
     parser = build_parser()
     args = parser.parse_args(argv)
-    account_command = args.twitch_login or args.twitch_login_bot or args.twitch_logout
+    youtube_command = bool(
+        args.youtube_import_secret is not None or args.youtube_login or args.youtube_logout
+    )
+    account_command = (
+        args.twitch_login or args.twitch_login_bot or args.twitch_logout or youtube_command
+    )
     euler_command = args.save_euler_key is not None or args.forget_euler_key
     if not (account_command or euler_command) and not args.fake and not args.tiktok:
-        parser.error("choose a source: --fake or --tiktok USERNAME (or a --twitch-login option)")
+        parser.error("choose a source: --fake or --tiktok USERNAME (or a login option)")
     if args.twitch_channel and not args.twitch:
         parser.error("--twitch-channel needs --twitch")
 
@@ -283,6 +336,8 @@ def main(argv: list[str] | None = None) -> int:
     store = KeyringStore()
     if euler_command:
         return run_euler_key_command(args, store)
+    if youtube_command:
+        return run_youtube_account_command(args, store)
     if account_command:
         return run_twitch_account_command(args, store)
 
@@ -294,10 +349,20 @@ def main(argv: list[str] | None = None) -> int:
     except TwitchSetupError as error:
         print(f"[error] {error}", file=sys.stderr)
         return 1
+    youtube = None
+    if args.youtube:
+        youtube = youtube_factory(config, store)
+        if youtube is None:
+            print(
+                "[error] YouTube is not set up. Run --youtube-import-secret PATH, "
+                "then --youtube-login.",
+                file=sys.stderr,
+            )
+            return 1
     listener = PrintingListener()
     engine = RelayEngine(
         source=build_source(args, store),
-        destinations=build_destinations(config, twitch),
+        destinations=build_destinations(config, twitch, youtube),
         settings=EngineSettings.from_config(config),
         listener=listener,
     )

@@ -7,12 +7,15 @@ import pytest
 import cli
 from fake_source import FakeSource
 from streambridge.auth import twitch_device
+from streambridge.core.config import AppConfig
 from streambridge.core.secrets import (
     TIKTOK_EULER_KEY,
     TWITCH_BOT_KEY,
     TWITCH_BROADCASTER_KEY,
+    YOUTUBE_TOKEN_KEY,
     MemoryStore,
 )
+from streambridge.destinations.console import ConsoleDestination
 from streambridge.destinations.twitch import TwitchDestination
 from streambridge.sources.tiktok import TikTokSource
 
@@ -163,3 +166,43 @@ def test_cli_fake_run_prints_messages(tmp_home: Path, capsys: pytest.CaptureFixt
     assert "[twitch-sim]" in output.out
     assert "[youtube-sim]" in output.out
     assert "--- summary ---" in output.err
+
+
+def test_youtube_logout_forgets_the_login(memory_keyring: MemoryStore) -> None:
+    memory_keyring.set(YOUTUBE_TOKEN_KEY, "x")
+    assert cli.main(["--youtube-logout"]) == 0
+    assert memory_keyring.values == {}
+
+
+def test_youtube_import_secret_copies_the_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, memory_keyring: MemoryStore
+) -> None:
+    monkeypatch.setenv("STREAMBRIDGE_HOME", str(tmp_path / "app"))
+    source = tmp_path / "client_secret_123.json"
+    source.write_text('{"installed": {"client_id": "abc"}}', encoding="utf-8")
+    assert cli.main(["--youtube-import-secret", str(source)]) == 0
+    assert (tmp_path / "app" / "client_secret.json").is_file()
+
+
+def test_youtube_import_secret_rejects_a_web_client(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, memory_keyring: MemoryStore, capsys
+) -> None:
+    monkeypatch.setenv("STREAMBRIDGE_HOME", str(tmp_path / "app"))
+    source = tmp_path / "web.json"
+    source.write_text('{"web": {"client_id": "abc"}}', encoding="utf-8")
+    assert cli.main(["--youtube-import-secret", str(source)]) == 1
+    assert "Desktop app" in capsys.readouterr().err
+
+
+def test_relay_to_youtube_before_setup_explains(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, memory_keyring: MemoryStore, capsys
+) -> None:
+    monkeypatch.setenv("STREAMBRIDGE_HOME", str(tmp_path))
+    assert cli.main(["--fake", "--youtube"]) == 1
+    assert "not set up" in capsys.readouterr().err
+
+
+def test_a_real_youtube_destination_replaces_the_simulated_one() -> None:
+    real = ConsoleDestination("youtube")
+    setups = cli.build_destinations(AppConfig(), youtube_destination=real)
+    assert [s.destination.name for s in setups] == ["twitch-sim", "youtube"]
