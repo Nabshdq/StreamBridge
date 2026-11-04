@@ -20,6 +20,7 @@ from streambridge.core.logging_setup import setup_logging
 from streambridge.core.outqueue import YOUTUBE_MAX_QUEUE
 from streambridge.core.ratelimit import TWITCH_RULES, YOUTUBE_RULES
 from streambridge.core.secrets import KeyringStore
+from streambridge.core.selfcheck import startup_check
 from streambridge.destinations.console import ConsoleDestination
 from streambridge.destinations.youtube import youtube_factory
 from streambridge.ui.bridge import SOURCE_ID, Backend, EngineFactory
@@ -106,6 +107,8 @@ def run(argv: Sequence[str] | None = None) -> int:
     args = list(sys.argv if argv is None else argv)
     fake = "--fake" in args
     setup_logging()
+    if not startup_check():
+        return 1
 
     # The native Windows style cannot be restyled; "Basic" lets Theme.qml control the look.
     QQuickStyle.setStyle("Basic")

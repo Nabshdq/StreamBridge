@@ -68,6 +68,7 @@ from streambridge.core.secrets import (
     KeyringStore,
     SecretStore,
 )
+from streambridge.core.selfcheck import startup_check
 from streambridge.destinations.base import Destination
 from streambridge.destinations.console import ConsoleDestination
 from streambridge.destinations.twitch import TwitchDestination
@@ -340,6 +341,9 @@ def main(argv: list[str] | None = None) -> int:
         return run_youtube_account_command(args, store)
     if account_command:
         return run_twitch_account_command(args, store)
+
+    if not startup_check(lambda _title, text: print(text, file=sys.stderr)):
+        return 2
 
     config = load_config(args.config)
     if args.lang:
