@@ -69,7 +69,7 @@ def test_chat_is_filtered_formatted_and_queued() -> None:
     pipeline = make_pipeline(twitch)
     pipeline.handle(event("chat", text="anjing seru"), now=0.0)
     pipeline.handle(event("chat", user="Sari", text="follow me ya"), now=0.0)
-    assert texts(twitch) == ["💬 [TikTok] Budi: a****g seru"]
+    assert texts(twitch) == ['💬 [TikTok] Budi: "a****g seru"']
     assert pipeline.counters.filtered == 1
 
 

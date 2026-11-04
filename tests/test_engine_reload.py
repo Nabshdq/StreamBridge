@@ -92,7 +92,7 @@ def test_rude_word_list_change_applies() -> None:
         {"rec": RouteOptions(all_on())},
     )
     source.pending.put(chat("dasar kampret"))
-    wait_until(lambda: destination.sent == ["💬 [TikTok] Budi: dasar k*****t"])
+    wait_until(lambda: destination.sent == ['💬 [TikTok] Budi: "dasar k*****t"'])
     engine.stop()
 
 
@@ -111,7 +111,7 @@ def test_turning_compact_off_sends_collected_chat() -> None:
     source.pending.put(chat("dua", user="Sari"))
     wait_until(lambda: len(destination.sent) == 2)
     engine.stop()
-    assert destination.sent[1] == "💬 [TikTok] Sari: dua"
+    assert destination.sent[1] == '💬 [TikTok] Sari: "dua"'
 
 
 def test_reload_keeps_collected_chat_when_compact_stays_on() -> None:

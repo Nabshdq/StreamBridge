@@ -149,7 +149,7 @@ def test_relays_events_end_to_end() -> None:
     assert not engine.is_running
     assert destination.stopped
     assert set(destination.sent) == {
-        "💬 [TikTok] Budi: halo",
+        '💬 [TikTok] Budi: "halo"',
         "⭐ [TikTok] Sari followed",
         "🎁 [TikTok] Budi sent Rose 🌹 x2",
     }
@@ -162,7 +162,7 @@ def test_temporary_errors_are_retried_until_sent() -> None:
     destination = RecordingDestination(temporary_failures=3)
     engine = RelayEngine(ListSource([ev("chat", text="penting")]), [setup_for(destination)], FAST)
     engine.start()
-    wait_until(lambda: destination.sent == ["💬 [TikTok] Budi: penting"])
+    wait_until(lambda: destination.sent == ['💬 [TikTok] Budi: "penting"'])
     engine.stop()
     assert destination.attempts == 4
 

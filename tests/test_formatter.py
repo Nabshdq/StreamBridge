@@ -31,7 +31,7 @@ EVENTS = {
 @pytest.mark.parametrize(
     ("kind", "expected"),
     [
-        ("chat", "💬 [TikTok] Budi: halo"),
+        ("chat", '💬 [TikTok] Budi: "halo"'),
         ("gift", "🎁 [TikTok] Budi sent Rose 🌹 x3"),
         ("follow", "⭐ [TikTok] Budi followed"),
         ("like", "❤️ [TikTok] Budi liked the LIVE"),
@@ -47,7 +47,7 @@ def test_english_defaults(kind: str, expected: str) -> None:
 @pytest.mark.parametrize(
     ("kind", "expected"),
     [
-        ("chat", "💬 [TikTok] Budi: halo"),
+        ("chat", '💬 [TikTok] Budi: "halo"'),
         ("gift", "🎁 [TikTok] Budi mengirim Rose 🌹 x3"),
         ("follow", "⭐ [TikTok] Budi mulai mengikuti"),
         ("like", "❤️ [TikTok] Budi menyukai LIVE"),
@@ -70,14 +70,14 @@ def test_custom_template_is_used() -> None:
 def test_braces_in_viewer_text_are_safe() -> None:
     """Viewers typing {user} or { do not break formatting."""
     event = RelayEvent(kind="chat", platform="tiktok", user="Budi", text="{user} {0} {")
-    assert make_formatter().format(event) == "💬 [TikTok] Budi: {user} {0} {"
+    assert make_formatter().format(event) == '💬 [TikTok] Budi: "{user} {0} {"'
 
 
 @pytest.mark.parametrize("broken", ["{user", "{0}", "{user.name}", "{user:>}}"])
 def test_broken_template_falls_back(broken: str) -> None:
     """A broken user template uses the default instead of crashing."""
     formatter = make_formatter(chat=broken)
-    assert formatter.format(EVENTS["chat"]) == "💬 [TikTok] Budi: halo"
+    assert formatter.format(EVENTS["chat"]) == '💬 [TikTok] Budi: "halo"'
 
 
 def test_unknown_placeholder_is_kept() -> None:
@@ -104,3 +104,11 @@ def test_gift_icon_lookup() -> None:
     assert gift_icon(" ROSE ") == "🌹"
     assert gift_icon("GOAT") == "🐐"  # seen on a real LIVE
     assert gift_icon("Something New") == DEFAULT_GIFT_ICON
+
+
+def test_long_chat_is_cut_with_an_ellipsis() -> None:
+    """A long message is cut at the limit; the closing quote may be lost, the ellipsis shows it."""
+    event = RelayEvent(kind="chat", platform="tiktok", user="Budi", text="a" * 600)
+    text = make_formatter().format(event)
+    assert len(text) <= 500
+    assert text.endswith("…")

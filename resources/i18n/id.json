@@ -1,5 +1,5 @@
 {
-  "relay.template.chat": "💬 [TikTok] {user}: {message}",
+  "relay.template.chat": "💬 [TikTok] {user}: \"{message}\"",
   "relay.template.gift": "🎁 [TikTok] {user} mengirim {gift} {icon} x{count}",
   "relay.template.follow": "⭐ [TikTok] {user} mulai mengikuti",
   "relay.template.like": "❤️ [TikTok] {user} menyukai LIVE",
