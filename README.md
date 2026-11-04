@@ -14,13 +14,13 @@ Everything runs on your own PC, and you use your own accounts.
 ## Progress
 *Last updated: 2026-11-04*
 
-**Now:** the app window, settings and first-run wizard work in demo mode. **Next:** connect the real Twitch and YouTube destinations.
+**Now:** the app window, settings and first-run wizard work in demo mode, and the YouTube destination is built (with a quota-aware chat pace). **Next:** real tests with TikTok, Twitch and YouTube, then the login steps of the wizard.
 
 - ✅ Phase 0 - Repo setup: done
 - ✅ Phase 1 - Core engine: done
 - 🟡 Phase 2 - TikTok source: code pushed, live-end test pending
 - 🟡 Phase 3 - Twitch destination: code pushed, real test pending
-- ⬜ Phase 4 - YouTube destination: code done, mock-tested; real test pending
+- 🟡 Phase 4 - YouTube destination: code pushed (mock-tested), real test pending
 - ✅ Phase 5 - UI skeleton: done
 - 🔵 Phase 6 - Wizard, Settings, languages: 3 of 4 parts done (login steps pending)
 - ⬜ Phase 7 - Packaging and beta: not started
