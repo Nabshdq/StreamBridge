@@ -20,7 +20,7 @@ Everything runs on your own PC, and you use your own accounts.
 - ✅ Phase 1 - Core engine: done
 - 🟡 Phase 2 - TikTok source: code pushed, live-end test pending
 - 🟡 Phase 3 - Twitch destination: code pushed, real test pending
-- ⬜ Phase 4 - YouTube destination: planning (research done, no code yet)
+- ⬜ Phase 4 - YouTube destination: code done, mock-tested; real test pending
 - ✅ Phase 5 - UI skeleton: done
 - 🔵 Phase 6 - Wizard, Settings, languages: 3 of 4 parts done (login steps pending)
 - ⬜ Phase 7 - Packaging and beta: not started
