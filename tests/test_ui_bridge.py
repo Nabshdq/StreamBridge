@@ -303,6 +303,12 @@ def test_quota_stays_when_the_relay_is_restarted(app):
     assert backend.quotaUsed == 240
     assert backend.quotaBudget == 10_000
 
+    # The new engine's first report has no quota yet (YouTube is still waiting).
+    engines[1].listener.on_counters(Counters())
+    pump(app)  # let the queued report reach the UI thread
+    assert backend.quotaUsed == 240
+    assert backend.quotaBudget == 10_000
+
 
 def test_quota_is_forgotten_when_youtube_is_removed(app):
     backend, engines = make_backend(app)

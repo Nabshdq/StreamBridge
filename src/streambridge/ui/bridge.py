@@ -224,7 +224,9 @@ class Backend(QObject):
         self._dropped = sum(counters.dropped.values())
         self._rejected = sum(counters.rejected.values())
         self._waiting = sum(counters.waiting.values())
-        self._quota_used, self._quota_budget = self._read_quota(counters)
+        used, budget = self._read_quota(counters)
+        if budget:  # a report without a quota (new session, still waiting) keeps the last one
+            self._quota_used, self._quota_budget = used, budget
         self.countersChanged.emit()
 
     @staticmethod
