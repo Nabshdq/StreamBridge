@@ -12,23 +12,25 @@ Button {
     implicitWidth: row.implicitWidth + Theme.space3
     focusPolicy: Qt.StrongFocus
 
-    contentItem: Row {
-        id: row
-        spacing: Theme.space1
-        anchors.centerIn: parent
+    contentItem: Item {
+        Row {
+            id: row
+            spacing: Theme.space1
+            anchors.centerIn: parent
 
-        SvgIcon {
-            anchors.verticalCenter: parent.verticalCenter
-            name: root.iconName
-            size: 20
-            visible: root.iconName !== ""
-        }
-        Text {
-            anchors.verticalCenter: parent.verticalCenter
-            text: root.text
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.bodySize
-            color: Theme.text
+            SvgIcon {
+                anchors.verticalCenter: parent.verticalCenter
+                name: root.iconName
+                size: 20
+                visible: root.iconName !== ""
+            }
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: root.text
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.bodySize
+                color: Theme.text
+            }
         }
     }
 

@@ -15,6 +15,7 @@ ColumnLayout {
     property bool secret: false
     property var validator: null
     signal committed(string value)
+    signal edited(string value)   // fires on every keystroke
 
     Layout.fillWidth: true
     spacing: Theme.space1
@@ -40,6 +41,7 @@ ColumnLayout {
         font.family: Theme.fontFamily
         font.pixelSize: Theme.bodySize
         color: Theme.text
+        onTextEdited: root.edited(text)
         onEditingFinished: {
             root.committed(text)
             // Show the cleaned-up value (for example without a leading @).

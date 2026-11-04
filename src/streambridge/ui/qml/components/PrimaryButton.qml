@@ -14,23 +14,27 @@ Button {
     implicitWidth: 192
     focusPolicy: Qt.StrongFocus
 
-    contentItem: Row {
-        spacing: Theme.space1
-        anchors.centerIn: parent
+    contentItem: Item {
+        Row {
+            spacing: Theme.space1
+            anchors.centerIn: parent
 
-        SvgIcon {
-            anchors.verticalCenter: parent.verticalCenter
-            name: root.iconName
-            color: root.accented ? Theme.textOnAccent : Theme.text
-            visible: root.iconName !== ""
-        }
-        Text {
-            anchors.verticalCenter: parent.verticalCenter
-            text: root.text
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.headingSize
-            font.weight: Theme.weightSemiBold
-            color: root.accented ? Theme.textOnAccent : Theme.text
+            SvgIcon {
+                anchors.verticalCenter: parent.verticalCenter
+                name: root.iconName
+                color: root.accented ? Theme.textOnAccent : Theme.text
+                visible: root.iconName !== ""
+            }
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: root.text
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.headingSize
+                font.weight: Theme.weightSemiBold
+                // A button that cannot be pressed also looks dimmer (and the screen says why).
+                color: !root.enabled ? Theme.textSecondary
+                       : root.accented ? Theme.textOnAccent : Theme.text
+            }
         }
     }
 
