@@ -84,7 +84,7 @@ Example: a viewer called Budi sends three Roses on TikTok.
 - **Secrets** (Twitch logins, the Euler API key) are in the **Windows
   Credential Manager** through `keyring` (`core/secrets.py`). They are never
   written to settings or log files.
-- **Logs** are in `%LOCALAPPDATA%\StreamBridge\logs\` (rotating, 1 MB × 5).
+- **Logs** are in `%LOCALAPPDATA%\StreamBridge\logs\` (rotating, 1 MB × 5). Hard crashes (native faults) are written to `crash.log` in the same folder.
 
 ## Rules that keep the relay robust
 
