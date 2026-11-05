@@ -49,6 +49,12 @@ $consoleMode = if ($Console) { "force" } else { "disable" }
 $resources = Join-Path $repo "src\streambridge\resources"
 $qml = Join-Path $repo "src\streambridge\ui\qml"
 
+# The YouTube client only ever loads the youtube v3 description. Ship just that file
+# (the whole package data is 600+ JSON files, about 107 MB). Take the path from the
+# build Python so no venv location is hard-coded.
+$youtubeJson = (& $Python -c "import googleapiclient, pathlib; print(pathlib.Path(googleapiclient.__file__).resolve().parent / 'discovery_cache' / 'documents' / 'youtube.v3.json')") | Select-Object -Last 1
+if (-not (Test-Path $youtubeJson)) { throw "youtube.v3.json not found at '$youtubeJson'" }
+
 & $Python -m nuitka `
     --mode=standalone `
     --mingw64 `
@@ -57,7 +63,7 @@ $qml = Join-Path $repo "src\streambridge\ui\qml"
     --include-qt-plugins=qml `
     --windows-console-mode=$consoleMode `
     --include-package=streambridge `
-    --include-package-data=googleapiclient `
+    "--include-data-files=$youtubeJson=googleapiclient/discovery_cache/documents/youtube.v3.json" `
     "--include-data-dir=$resources=streambridge/resources" `
     "--include-data-dir=$qml=streambridge/ui/qml" `
     --output-filename=StreamBridge.exe `
