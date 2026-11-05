@@ -35,11 +35,8 @@ if (-not (Test-Path $Python)) { throw "Python not found: $Python (use -Python)" 
 $ErrorActionPreference = "Continue"
 
 # The build must compile THIS checkout, not a copy in site-packages.
-$package = (& $Python -c "import streambridge, pathlib; print(pathlib.Path(streambridge.__file__).resolve())") | Select-Object -Last 1
-$expected = Join-Path $repo "src\streambridge"
-if (-not $package.StartsWith($expected, [StringComparison]::OrdinalIgnoreCase)) {
-    throw "streambridge is imported from '$package', not from '$expected'. Run: pip install -e `"$repo`""
-}
+. (Join-Path $PSScriptRoot "version.ps1")
+Assert-StreamBridgeCheckout -Python $Python -Repo $repo
 
 & $Python -c "import nuitka" 2>$null
 if ($LASTEXITCODE -ne 0) { throw "Nuitka is not installed in $Python (pip install nuitka==4.3.4)" }
@@ -72,13 +69,12 @@ $qtExcludes = $unusedQt | ForEach-Object { "--noinclude-dlls=$_" }
 
 # One version source: __version__ in src/streambridge/__init__.py. Nuitka only accepts up
 # to 4 plain numbers for the Windows version resource, so "0.1.0b0" becomes "0.1.0.0".
-# $version keeps the full text (the installer will use it).
-$version = (& $Python -c "import streambridge; print(streambridge.__version__)") | Select-Object -Last 1
-$numeric = (& $Python -c "import re, streambridge; m = re.match(r'\d+(?:\.\d+){0,3}', streambridge.__version__); print(m.group(0) if m else '')") | Select-Object -Last 1
-if (-not $numeric) { throw "Cannot read a numeric version from '$version'" }
-$parts = @($numeric -split '\.')
-while ($parts.Count -lt 4) { $parts += '0' }
-$winVersion = $parts -join '.'
+# $version keeps the full text. Because "0.1.0.dev0" and "0.1.0b0" both give "0.1.0.0",
+# the full text is ALSO written into the file description: installer.ps1 reads it back to
+# refuse packing a stale build.
+$v = Get-StreamBridgeVersion -Python $Python
+$version = $v.Full
+$winVersion = $v.Windows
 Write-Host "Version: $version (Windows file version $winVersion)"
 
 $youtubeJson = (& $Python -c "import googleapiclient, pathlib; print(pathlib.Path(googleapiclient.__file__).resolve().parent / 'discovery_cache' / 'documents' / 'youtube.v3.json')") | Select-Object -Last 1
@@ -99,7 +95,7 @@ if (-not (Test-Path $youtubeJson)) { throw "youtube.v3.json not found at '$youtu
     --output-filename=StreamBridge.exe `
     --output-folder-name=StreamBridge `
     --product-name=StreamBridge `
-    --file-description="StreamBridge" `
+    "--file-description=StreamBridge $version" `
     "--file-version=$winVersion" `
     "--product-version=$winVersion" `
     "--output-dir=$output" `
