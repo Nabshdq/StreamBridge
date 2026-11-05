@@ -105,8 +105,9 @@ def test_error_inside_a_qt_slot_reaches_the_log(hooks, caplog) -> None:
     QGuiApplication.instance() or QGuiApplication([])  # same kind as the UI tests use
     emitter, receiver = _Emitter(), _Receiver()
     emitter.ping.connect(receiver.on_ping)
-    with caplog.at_level(logging.WARNING):
+    with caplog.at_level(logging.ERROR):
         emitter.ping.emit()
-    assert any(
-        "boom-slot" in r.getMessage() or "boom-slot" in str(r.exc_info) for r in caplog.records
-    )
+    crash_records = [r for r in _errors(caplog) if r.name == "streambridge.crash"]
+    assert len(crash_records) == 1  # it came through sys.excepthook, not the Qt handler
+    assert crash_records[0].exc_info is not None
+    assert "boom-slot" in str(crash_records[0].exc_info[1])
