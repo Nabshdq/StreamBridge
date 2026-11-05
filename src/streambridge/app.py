@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -28,6 +29,8 @@ from streambridge.ui.icons import IconProvider
 from streambridge.ui.settings_bridge import SettingsBridge
 from streambridge.ui.translator import UiTranslator
 from streambridge.ui.wizard import WizardController
+
+logger = logging.getLogger(__name__)
 
 QML_DIR = Path(__file__).resolve().parent / "ui" / "qml"
 FAKE_CONNECTIONS = (SOURCE_ID, "twitch-sim", "youtube-sim")
@@ -107,6 +110,7 @@ def run(argv: Sequence[str] | None = None) -> int:
     args = list(sys.argv if argv is None else argv)
     fake = "--fake" in args
     setup_logging()
+    logger.info("Startup: compiled=%s stderr=%r", "__compiled__" in globals(), sys.stderr)
     if not startup_check():
         return 1
 
