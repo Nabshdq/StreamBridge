@@ -14,7 +14,7 @@ Everything runs on your own PC, and you use your own accounts.
 ## Progress
 *Last updated: 2026-11-05*
 
-**Now:** the real app now builds as a Windows program with a build script. It opens, refuses to start if its own files are missing, and writes crashes to the log file. The window, settings and first-run wizard work in demo mode, and the YouTube destination is built. **Next:** make the build smaller, add the update check and the installer. Real tests with TikTok, Twitch and YouTube are still pending.
+**Now:** the real app now builds as a Windows program with a build script. It opens, refuses to start if its own files are missing, and writes crashes to the log file. The window, settings and first-run wizard work in demo mode, and the YouTube destination is built. The program folder is now 235 MB instead of 598 MB. **Next:** add the update check and the installer. Real tests with TikTok, Twitch and YouTube are still pending.
 
 - ✅ Phase 0 - Repo setup: done
 - ✅ Phase 1 - Core engine: done
@@ -23,7 +23,7 @@ Everything runs on your own PC, and you use your own accounts.
 - 🟡 Phase 4 - YouTube destination: code pushed (mock-tested, quota shown on the dashboard), real test pending
 - ✅ Phase 5 - UI skeleton: done
 - 🔵 Phase 6 - Wizard, Settings, languages: 3 of 4 parts done (login steps pending)
-- 🔵 Phase 7 - Packaging and beta: in progress (app builds and runs; smaller build, update check and installer not started)
+- 🔵 Phase 7 - Packaging and beta: in progress (app builds, runs and is trimmed to 235 MB; update check and installer not started)
 - ⬜ Phase 8 - Fixes from beta feedback: not started
 <!-- PROGRESS:END -->
 
