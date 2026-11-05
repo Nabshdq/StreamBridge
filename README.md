@@ -14,7 +14,7 @@ Everything runs on your own PC, and you use your own accounts.
 ## Progress
 *Last updated: 2026-11-05*
 
-**Now:** the app now checks GitHub once per launch for a newer release and shows a notice with a link to the download page (it never downloads anything itself). The built program was checked: the check runs and finds nothing newer. **Next:** the Windows installer. Real tests with TikTok, Twitch and YouTube are still pending.
+**Now:** there is a Windows installer (English and Bahasa Indonesia, no admin rights needed, 56 MB). Installing, installing again over an existing install, and uninstalling were tested on this PC; uninstalling keeps settings and logins on purpose. **Next:** try the installer on a clean Windows PC. Real tests with TikTok, Twitch and YouTube are still pending.
 
 - ✅ Phase 0 - Repo setup: done
 - ✅ Phase 1 - Core engine: done
@@ -23,7 +23,7 @@ Everything runs on your own PC, and you use your own accounts.
 - 🟡 Phase 4 - YouTube destination: code pushed (mock-tested, quota shown on the dashboard), real test pending
 - ✅ Phase 5 - UI skeleton: done
 - 🔵 Phase 6 - Wizard, Settings, languages: 3 of 4 parts done (login steps pending)
-- 🔵 Phase 7 - Packaging and beta: in progress (app builds, runs, is trimmed to 235 MB and has the update notice; installer not started)
+- 🔵 Phase 7 - Packaging and beta: in progress (app builds, runs, is trimmed to 235 MB, has the update notice and an installer; clean-PC test pending)
 - ⬜ Phase 8 - Fixes from beta feedback: not started
 <!-- PROGRESS:END -->
 
@@ -71,6 +71,19 @@ Try the relay without the app, using the command-line tool:
 
 Press Ctrl+C to stop; a summary of sent, dropped and filtered messages follows.
 Run `tools\cli.py --help` for all options.
+
+Build the Windows installer (needs the build environment from `build/build.ps1` and
+[Inno Setup 7](https://jrsoftware.org/isdl.php)):
+
+```powershell
+.\build\build.ps1 -Python <python.exe of the build environment>
+.\build\installer.ps1 -Python <the same python.exe>
+```
+
+Uninstalling StreamBridge keeps your data on purpose (a new version installs over the
+old one and keeps your logins). To remove everything by hand, delete
+`%APPDATA%\StreamBridge`, `%LOCALAPPDATA%\StreamBridge`, and the StreamBridge entries in
+Windows Credential Manager.
 
 How the pieces fit together is explained in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 

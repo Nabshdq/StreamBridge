@@ -110,6 +110,33 @@ Example: a viewer called Budi sends three Roses on TikTok.
 4. Test it against a fake server (see `tests/test_twitch_destination.py`,
    which uses `httpx.MockTransport`) — tests never use the network.
 
+## Packaging
+
+Two steps, both in `build/`, both read the version from `__version__` in
+`src/streambridge/__init__.py` through `build/version.ps1` (one derivation, no copies):
+
+1. `build.ps1` compiles the program with Nuitka into `build/output/<name>/StreamBridge.dist`.
+   It writes the full version text (for example `0.1.0b0`) into the exe's file
+   description, because the Windows file version only holds numbers
+   (`0.1.0.dev0` and `0.1.0b0` are both `0.1.0.0`).
+2. `installer.ps1` packs that folder with Inno Setup 7 (`installer.iss`) into
+   `build/output/installer/StreamBridge-Setup-<version>.exe`. It refuses to run when
+   the exe's file description does not match the current `__version__`, so a stale build
+   cannot be packed after a version bump.
+
+The installer is per-user (`%LOCALAPPDATA%\Programs\StreamBridge`, no admin rights) and
+speaks English and Bahasa Indonesia (`Indonesian.isl` is the unofficial translation from
+the Inno Setup project, copied unchanged). Installing again over an older version closes
+the running app and then clears the old program files first, so no leftover DLLs or Qt
+plugins get loaded. This clean-up only happens when the install folder is named
+`StreamBridge` and holds our earlier install (`StreamBridge.exe` and `unins000.dat`); a
+folder the user typed by hand, such as `D:\Apps`, is never wiped.
+
+Uninstalling removes the program files, the shortcuts and the Windows uninstall entry
+(an empty `StreamBridge` folder can stay behind). User data stays on purpose, so a reinstall or an upgrade keeps the logins:
+`%APPDATA%\StreamBridge` (settings), `%LOCALAPPDATA%\StreamBridge` (logs) and the
+StreamBridge entries in Windows Credential Manager.
+
 ## Testing
 
 - `pytest` runs everything; CI runs the same checks on Windows for every push.
