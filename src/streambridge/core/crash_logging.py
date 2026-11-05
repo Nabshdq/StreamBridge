@@ -7,10 +7,13 @@ hooks write them to the log instead, so a bug report can contain the real cause.
 
 from __future__ import annotations
 
+import faulthandler
 import logging
 import sys
 import threading
 import types
+from pathlib import Path
+from typing import TextIO
 
 logger = logging.getLogger("streambridge.crash")
 
@@ -57,6 +60,30 @@ def _log_qt_message(message_type: object, context: object, message: str) -> None
     """Qt message handler: forward Qt and QML messages to logging."""
     qt_logger = logging.getLogger("streambridge.qt")
     qt_logger.log(_qt_level(message_type), "%s", message)
+
+
+NATIVE_CRASH_FILE = "crash.log"
+_native_crash_file: TextIO | None = None  # faulthandler needs this file to stay open
+
+
+def enable_native_crash_log(log_folder: Path) -> Path | None:
+    """Make a hard crash (access violation, segfault) write its stack to ``crash.log``.
+
+    A separate file is used on purpose: the rotating log would fight over the file
+    on Windows. Failure here must never stop the app, so problems are only logged.
+    """
+    global _native_crash_file
+    if _native_crash_file is not None:
+        return Path(_native_crash_file.name)
+    try:
+        log_folder.mkdir(parents=True, exist_ok=True)
+        crash_file = open(log_folder / NATIVE_CRASH_FILE, "a", encoding="utf-8")  # noqa: SIM115
+        faulthandler.enable(file=crash_file)
+    except (OSError, RuntimeError) as problem:
+        logger.warning("Could not enable the native crash log: %s", problem)
+        return None
+    _native_crash_file = crash_file
+    return log_folder / NATIVE_CRASH_FILE
 
 
 def install_crash_logging() -> None:

@@ -111,3 +111,29 @@ def test_error_inside_a_qt_slot_reaches_the_log(hooks, caplog) -> None:
     assert len(crash_records) == 1  # it came through sys.excepthook, not the Qt handler
     assert crash_records[0].exc_info is not None
     assert "boom-slot" in str(crash_records[0].exc_info[1])
+
+
+def test_native_crash_writes_a_stack_to_crash_log(tmp_path) -> None:
+    """A real hard crash (run in a child process) leaves its stack in crash.log."""
+    import subprocess
+
+    code = (
+        "import faulthandler, pathlib, sys;"
+        "from streambridge.core.crash_logging import enable_native_crash_log;"
+        f"enable_native_crash_log(pathlib.Path({str(tmp_path)!r}));"
+        "faulthandler._sigsegv()"
+    )
+    result = subprocess.run([sys.executable, "-c", code], timeout=60, capture_output=True)
+    assert result.returncode != 0
+    text = (tmp_path / "crash.log").read_text(encoding="utf-8")
+    assert "Windows fatal exception" in text or "Fatal Python error" in text
+
+
+def test_native_crash_log_survives_an_unusable_folder(tmp_path, monkeypatch, caplog) -> None:
+    """If the folder cannot be created, the app keeps going and only logs a warning."""
+    monkeypatch.setattr(crash_logging, "_native_crash_file", None)
+    blocker = tmp_path / "a-file"
+    blocker.write_text("x")
+    with caplog.at_level(logging.WARNING):
+        assert crash_logging.enable_native_crash_log(blocker / "logs") is None
+    assert any("native crash log" in r.getMessage() for r in caplog.records)

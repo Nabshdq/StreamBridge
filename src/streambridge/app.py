@@ -15,7 +15,7 @@ from PySide6.QtQuickControls2 import QQuickStyle
 from streambridge.core import paths
 from streambridge.core.assembly import assemble_engine
 from streambridge.core.config import AppConfig, load_config
-from streambridge.core.crash_logging import install_crash_logging
+from streambridge.core.crash_logging import enable_native_crash_log, install_crash_logging
 from streambridge.core.engine import DestinationSetup, EngineListener, EngineSettings, RelayEngine
 from streambridge.core.formatter import TWITCH_MAX_LENGTH, YOUTUBE_MAX_LENGTH
 from streambridge.core.logging_setup import setup_logging
@@ -112,6 +112,7 @@ def run(argv: Sequence[str] | None = None) -> int:
     fake = "--fake" in args
     setup_logging()
     install_crash_logging()
+    enable_native_crash_log(paths.log_dir())
     logger.info("Startup: compiled=%s stderr=%r", "__compiled__" in globals(), sys.stderr)
     if not startup_check():
         return 1
