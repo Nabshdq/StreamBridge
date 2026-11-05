@@ -70,6 +70,17 @@ $unusedQt = @(
 )
 $qtExcludes = $unusedQt | ForEach-Object { "--noinclude-dlls=$_" }
 
+# One version source: __version__ in src/streambridge/__init__.py. Nuitka only accepts up
+# to 4 plain numbers for the Windows version resource, so "0.1.0b0" becomes "0.1.0.0".
+# $version keeps the full text (the installer will use it).
+$version = (& $Python -c "import streambridge; print(streambridge.__version__)") | Select-Object -Last 1
+$numeric = (& $Python -c "import re, streambridge; m = re.match(r'\d+(?:\.\d+){0,3}', streambridge.__version__); print(m.group(0) if m else '')") | Select-Object -Last 1
+if (-not $numeric) { throw "Cannot read a numeric version from '$version'" }
+$parts = @($numeric -split '\.')
+while ($parts.Count -lt 4) { $parts += '0' }
+$winVersion = $parts -join '.'
+Write-Host "Version: $version (Windows file version $winVersion)"
+
 $youtubeJson = (& $Python -c "import googleapiclient, pathlib; print(pathlib.Path(googleapiclient.__file__).resolve().parent / 'discovery_cache' / 'documents' / 'youtube.v3.json')") | Select-Object -Last 1
 if (-not (Test-Path $youtubeJson)) { throw "youtube.v3.json not found at '$youtubeJson'" }
 
@@ -89,8 +100,8 @@ if (-not (Test-Path $youtubeJson)) { throw "youtube.v3.json not found at '$youtu
     --output-folder-name=StreamBridge `
     --product-name=StreamBridge `
     --file-description="StreamBridge" `
-    --file-version=0.1.0.0 `
-    --product-version=0.1.0.0 `
+    "--file-version=$winVersion" `
+    "--product-version=$winVersion" `
     "--output-dir=$output" `
     (Join-Path $repo "src\streambridge\__main__.py")
 if ($LASTEXITCODE -ne 0) { throw "Nuitka failed with exit code $LASTEXITCODE" }

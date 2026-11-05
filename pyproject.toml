@@ -4,7 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "streambridge"
-version = "0.1.0.dev0"
+# The version is written once, in src/streambridge/__init__.py (see [tool.hatch.version]).
+dynamic = ["version"]
 description = "Relay TikTok LIVE chat, gifts and follows to Twitch and YouTube live chat."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -33,6 +34,7 @@ dependencies = [
     "google-api-python-client==2.201.0",
     "google-auth-oauthlib==1.5.0",
     "httplib2>=0.22",  # imported directly (network errors); also pulled in by the client
+    "packaging>=24.0",  # version comparison for the "new version available" check
     # The desktop UI. Pinned exactly so the Qt runtime only changes on purpose.
     "PySide6==6.12.0",
 ]
@@ -50,6 +52,9 @@ Issues = "https://github.com/Nabshdq/StreamBridge/issues"
 
 [project.scripts]
 streambridge = "streambridge.__main__:main"
+
+[tool.hatch.version]
+path = "src/streambridge/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/streambridge"]
