@@ -87,6 +87,52 @@ ApplicationWindow {
                         }
                     }
                 }
+
+                // Only shown when a newer release exists: opens its download page.
+                ItemDelegate {
+                    id: updateItem
+                    visible: appUpdate.available
+                    width: parent.width
+                    height: Theme.space6 + Theme.space1
+                    focusPolicy: Qt.StrongFocus
+                    onClicked: appSettings.openUrl(appUpdate.releaseUrl)
+
+                    contentItem: Row {
+                        spacing: Theme.space2
+                        leftPadding: Theme.space1
+                        SvgIcon {
+                            anchors.verticalCenter: parent.verticalCenter
+                            name: "external-link"
+                            color: Theme.text
+                        }
+                        Column {
+                            anchors.verticalCenter: parent.verticalCenter
+                            // Whatever the language, the text stays inside the button.
+                            width: updateItem.availableWidth - Theme.iconSize - Theme.space1 - Theme.space2
+                            Text {
+                                width: parent.width
+                                elide: Text.ElideRight
+                                text: i18n.strings["ui.nav.update"]
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.bodySize
+                                font.weight: Theme.weightSemiBold
+                                color: Theme.text
+                            }
+                            Text {
+                                text: appUpdate.latestVersion
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.labelSize
+                                color: Theme.textSecondary
+                            }
+                        }
+                    }
+                    background: Rectangle {
+                        radius: Theme.radiusSmall
+                        color: Theme.raised
+                        border.width: updateItem.activeFocus ? Theme.focusWidth : 1
+                        border.color: updateItem.activeFocus ? Theme.text : Theme.borderStrong
+                    }
+                }
             }
         }
 

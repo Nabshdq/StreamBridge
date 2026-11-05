@@ -41,6 +41,16 @@ Item {
                 color: Theme.textSecondary
             }
             Text {
+                Layout.fillWidth: true
+                visible: appUpdate.available
+                text: i18n.strings["ui.about.update"].replace("%1", () => appUpdate.latestVersion)
+                wrapMode: Text.Wrap
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.bodySize
+                font.weight: Theme.weightSemiBold
+                color: Theme.text
+            }
+            Text {
                 text: i18n.strings["ui.about.license"]
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.bodySize
@@ -51,6 +61,12 @@ Item {
                 Layout.fillWidth: true
                 spacing: Theme.space1
 
+                SecondaryButton {
+                    visible: appUpdate.available
+                    text: i18n.strings["ui.about.update_button"]
+                    iconName: "external-link"
+                    onClicked: root.settings.openUrl(appUpdate.releaseUrl)
+                }
                 SecondaryButton {
                     text: i18n.strings["ui.about.github"]
                     iconName: "external-link"

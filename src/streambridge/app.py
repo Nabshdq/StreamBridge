@@ -12,6 +12,7 @@ from PySide6.QtGui import QFontDatabase, QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuickControls2 import QQuickStyle
 
+from streambridge import __version__
 from streambridge.core import paths
 from streambridge.core.assembly import assemble_engine
 from streambridge.core.config import AppConfig, load_config
@@ -23,12 +24,14 @@ from streambridge.core.outqueue import YOUTUBE_MAX_QUEUE
 from streambridge.core.ratelimit import TWITCH_RULES, YOUTUBE_RULES
 from streambridge.core.secrets import KeyringStore
 from streambridge.core.selfcheck import startup_check
+from streambridge.core.updates import check_for_update
 from streambridge.destinations.console import ConsoleDestination
 from streambridge.destinations.youtube import youtube_factory
 from streambridge.ui.bridge import SOURCE_ID, Backend, EngineFactory
 from streambridge.ui.icons import IconProvider
 from streambridge.ui.settings_bridge import SettingsBridge
 from streambridge.ui.translator import UiTranslator
+from streambridge.ui.update_bridge import UpdateBridge
 from streambridge.ui.wizard import WizardController
 
 logger = logging.getLogger(__name__)
@@ -132,6 +135,8 @@ def run(argv: Sequence[str] | None = None) -> int:
     translator = UiTranslator()
     settings = SettingsBridge(translator)  # also applies the saved screen language
     wizard = WizardController(settings)
+    # Read __version__ directly: a packaged build has no installed-package metadata.
+    updates = UpdateBridge(lambda: check_for_update(__version__))
     if not fake:
         follow_enabled_destinations(backend, settings)
     engine = QQmlApplicationEngine()
@@ -141,12 +146,14 @@ def run(argv: Sequence[str] | None = None) -> int:
     context.setContextProperty("i18n", translator)
     context.setContextProperty("appSettings", settings)
     context.setContextProperty("appWizard", wizard)
+    context.setContextProperty("appUpdate", updates)
     engine.addImageProvider("icons", IconProvider(paths.resources_dir() / "icons"))
     engine.load(QUrl.fromLocalFile(str(QML_DIR / "Main.qml")))
     if not engine.rootObjects():
         return 1
+    updates.start()  # once per launch, in the background
     exit_code = app.exec()
     # Destroy the QML engine first. Otherwise Python frees ``backend`` while the
     # screens still read it, and QML prints "Cannot read property ... of null".
-    del context, engine, wizard, settings, translator
+    del context, engine, updates, wizard, settings, translator
     return exit_code

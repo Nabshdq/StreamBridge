@@ -22,10 +22,12 @@ from streambridge.app import QML_DIR, register_fonts  # noqa: E402
 from streambridge.core import paths  # noqa: E402
 from streambridge.core.config import AppConfig, save_config  # noqa: E402
 from streambridge.core.secrets import MemoryStore
+from streambridge.core.updates import UpdateInfo  # noqa: E402
 from streambridge.ui.bridge import Backend  # noqa: E402
 from streambridge.ui.icons import IconProvider  # noqa: E402
 from streambridge.ui.settings_bridge import SettingsBridge  # noqa: E402
 from streambridge.ui.translator import UiTranslator  # noqa: E402
+from streambridge.ui.update_bridge import UpdateBridge  # noqa: E402
 from streambridge.ui.wizard import WizardController  # noqa: E402
 
 
@@ -60,19 +62,33 @@ def test_main_window_loads_and_follows_the_backend(tmp_path):
         save_config(AppConfig(setup_complete=True), tmp_path / "config.json")
         settings = SettingsBridge(translator, tmp_path / "config.json", MemoryStore())
         wizard = WizardController(settings)
+        # A stub checker: the test never touches the network.
+        updates = UpdateBridge(
+            lambda: UpdateInfo("0.2.0", "https://github.com/x/y/releases/tag/v0.2.0")
+        )
         context.setContextProperty("backend", backend)
         context.setContextProperty("i18n", translator)
         context.setContextProperty("appSettings", settings)
         context.setContextProperty("appWizard", wizard)
+        context.setContextProperty("appUpdate", updates)
         engine.addImageProvider("icons", IconProvider(paths.resources_dir() / "icons"))
         engine.load(QUrl.fromLocalFile(str(QML_DIR / "Main.qml")))
         assert engine.rootObjects(), problems
 
         backend.start()
+        updates.start()
         engine.rootObjects()[0].grabWindow()  # forces a real render of every item
+        # The check runs on a thread: wait (up to 5 s) for its answer, as a slow CI runner may.
+        deadline = time.monotonic() + 5
+        while not updates.available and time.monotonic() < deadline:
+            app.processEvents()
+            time.sleep(0.01)
         for _ in range(20):
             app.processEvents()
             time.sleep(0.01)
+        # The background check finished: the side menu offers the newer version.
+        assert updates.available
+        assert "Update available" in _texts(engine.rootObjects()[0])
         listener = backend._engine.listener
         listener.on_message_sent("twitch", "hello")
         listener.on_message_rejected("twitch", "bad", "too long")
@@ -110,6 +126,8 @@ def test_main_window_loads_and_follows_the_backend(tmp_path):
         for _ in range(10):
             app.processEvents()
         assert "Open the log folder" in _texts(root)
+        assert "Update available: version 0.2.0" in _texts(root)
+        assert "Open the download page" in _texts(root)
 
         # "Run the setup again" in Settings opens the wizard over everything.
         assert "Welcome to StreamBridge" not in _texts(root)
@@ -165,6 +183,8 @@ def test_wizard_shows_on_first_run_and_follows_the_chosen_destinations(tmp_path)
         context.setContextProperty("i18n", translator)
         context.setContextProperty("appSettings", settings)
         context.setContextProperty("appWizard", wizard)
+        updates = UpdateBridge()  # no checker: nothing to show
+        context.setContextProperty("appUpdate", updates)
         engine.addImageProvider("icons", IconProvider(paths.resources_dir() / "icons"))
         engine.load(QUrl.fromLocalFile(str(QML_DIR / "Main.qml")))
         assert engine.rootObjects(), problems
