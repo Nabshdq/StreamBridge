@@ -38,5 +38,9 @@ class ConsoleDestination(Destination):
     async def send(self, text: str) -> SendResult:
         """Print the message."""
         stream = self._stream or sys.stdout
-        print(f"{time.strftime('%H:%M:%S')} [{self.name}] {text}", file=stream, flush=True)
+        line = f"{time.strftime('%H:%M:%S')} [{self.name}] {text}"
+        # A Windows console (cp1252) cannot show emoji: print '?' instead of failing the send.
+        encoding = getattr(stream, "encoding", None) or "utf-8"
+        safe_line = line.encode(encoding, errors="replace").decode(encoding, errors="replace")
+        print(safe_line, file=stream, flush=True)
         return SendResult(ok=True)
