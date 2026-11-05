@@ -54,6 +54,7 @@ from streambridge.auth.twitch_device import (
 )
 from streambridge.core.assembly import euler_key as saved_euler_key
 from streambridge.core.config import AppConfig, load_config
+from streambridge.core.crash_logging import install_crash_logging
 from streambridge.core.engine import DestinationSetup, EngineListener, EngineSettings, RelayEngine
 from streambridge.core.events import ConnectionStatus
 from streambridge.core.formatter import TWITCH_MAX_LENGTH, YOUTUBE_MAX_LENGTH
@@ -333,6 +334,7 @@ def main(argv: list[str] | None = None) -> int:
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8", errors="replace")
     setup_logging(console_level=logging.WARNING)
+    install_crash_logging()
 
     store = KeyringStore()
     if euler_command:

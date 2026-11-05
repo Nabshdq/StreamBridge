@@ -1,0 +1,112 @@
+"""Tests for the crash logging hooks (a windowed build has no visible stderr)."""
+
+from __future__ import annotations
+
+import logging
+import os
+import sys
+import threading
+
+import pytest
+
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
+from PySide6.QtCore import (  # noqa: E402
+    QObject,
+    Signal,
+    Slot,
+    qInstallMessageHandler,
+    qWarning,
+)
+from PySide6.QtGui import QGuiApplication  # noqa: E402
+
+from streambridge.core import crash_logging  # noqa: E402
+
+
+@pytest.fixture
+def hooks(monkeypatch: pytest.MonkeyPatch):
+    """Install the hooks for one test, then put every global hook back."""
+    monkeypatch.setattr(crash_logging, "_installed", False)
+    monkeypatch.setattr(crash_logging, "_original_excepthook", lambda *args: None)
+    monkeypatch.setattr(crash_logging, "_original_thread_hook", lambda args: None)
+    saved = (sys.excepthook, threading.excepthook)
+    crash_logging.install_crash_logging()
+    yield
+    sys.excepthook, threading.excepthook = saved
+    qInstallMessageHandler(None)
+
+
+def _errors(caplog: pytest.LogCaptureFixture) -> list[logging.LogRecord]:
+    return [r for r in caplog.records if r.levelno >= logging.ERROR]
+
+
+def test_main_thread_error_is_logged_with_traceback(hooks, caplog) -> None:
+    with caplog.at_level(logging.ERROR):
+        try:
+            raise ValueError("boom-main")
+        except ValueError:
+            sys.excepthook(*sys.exc_info())
+    records = _errors(caplog)
+    assert len(records) == 1
+    assert records[0].exc_info is not None
+    assert "boom-main" in str(records[0].exc_info[1])
+
+
+def test_keyboard_interrupt_is_not_logged(hooks, caplog) -> None:
+    with caplog.at_level(logging.ERROR):
+        try:
+            raise KeyboardInterrupt
+        except KeyboardInterrupt:
+            sys.excepthook(*sys.exc_info())
+    assert _errors(caplog) == []
+
+
+def test_background_thread_error_is_logged(hooks, caplog) -> None:
+    def explode() -> None:
+        raise RuntimeError("boom-thread")
+
+    with caplog.at_level(logging.ERROR):
+        worker = threading.Thread(target=explode, name="TestWorker")
+        worker.start()
+        worker.join()
+    records = _errors(caplog)
+    assert len(records) == 1
+    assert "TestWorker" in records[0].getMessage()
+
+
+def test_qt_warning_reaches_the_log(hooks, caplog) -> None:
+    with caplog.at_level(logging.WARNING):
+        qWarning("qt-warning-text")
+    assert any("qt-warning-text" in r.getMessage() for r in caplog.records)
+
+
+def test_installing_twice_does_not_log_twice(hooks, caplog) -> None:
+    crash_logging.install_crash_logging()
+    with caplog.at_level(logging.ERROR):
+        try:
+            raise ValueError("once")
+        except ValueError:
+            sys.excepthook(*sys.exc_info())
+    assert len(_errors(caplog)) == 1
+
+
+class _Emitter(QObject):
+    ping = Signal()
+
+
+class _Receiver(QObject):
+    @Slot()
+    def on_ping(self) -> None:
+        raise RuntimeError("boom-slot")
+
+
+def test_error_inside_a_qt_slot_reaches_the_log(hooks, caplog) -> None:
+    """Proof, not an assumption: PySide6 must hand slot errors to our hooks."""
+    QGuiApplication.instance() or QGuiApplication([])  # same kind as the UI tests use
+    emitter, receiver = _Emitter(), _Receiver()
+    emitter.ping.connect(receiver.on_ping)
+    with caplog.at_level(logging.WARNING):
+        emitter.ping.emit()
+    assert any(
+        "boom-slot" in r.getMessage() or "boom-slot" in str(r.exc_info) for r in caplog.records
+    )
