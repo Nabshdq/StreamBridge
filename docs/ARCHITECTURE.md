@@ -69,7 +69,7 @@ Example: a viewer called Budi sends three Roses on TikTok.
 
 | Package | What lives there |
 |---|---|
-| `core/` | Everything platform-independent: events, filters, queues, rate limits, the engine, settings (`config.py`), secrets (`secrets.py`), and `assembly.py`, which builds an engine from the user's settings, `selfcheck.py`, the startup check that refuses to run when bundled resources are missing, and `crash_logging.py`, which writes uncaught errors and Qt messages to the log (a packaged build has no console) |
+| `core/` | Everything platform-independent: events, filters, queues, rate limits, the engine, settings (`config.py`), secrets (`secrets.py`), and `assembly.py`, which builds an engine from the user's settings, `selfcheck.py`, the startup check that refuses to run when bundled resources are missing, and `crash_logging.py`, which writes uncaught errors and Qt messages to the log (a packaged build has no console), and `updates.py`, the once-per-launch check of GitHub Releases for a newer version (notify only; the Qt side is `ui/update_bridge.py`, which runs it on a background thread) |
 | `sources/` | Where events come from. `base.Source` is the interface; `tiktok.py` is the real one |
 | `destinations/` | Where messages go. `base.Destination` is the interface; `console.py` (for development) and `twitch.py` |
 | `auth/` | Logins: `twitch_device.py` (Twitch device code flow, refresh, hourly validation) |
